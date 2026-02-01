@@ -1,4 +1,4 @@
-// --- VERSÃO API: 1.0.1 (Release Oficial - Sistema Completo) ---
+// --- VERSÃO API: 1.0.5 (Release Oficial - Sistema Completo) ---
 const PROJECT_ID_API = 'maga-bigdata';
 
 // ÚNICA PLANILHA DE GESTÃO
@@ -295,7 +295,7 @@ function handlePowerShellQueueRequest() {
     let sheetQueue = ss.getSheetByName("Solicitações");
 
     if (!sheetQueue) {
-        return ContentService.createTextOutput(JSON.stringify({ error: "[v1.0.0] Aba 'Solicitações' não encontrada." }))
+        return ContentService.createTextOutput(JSON.stringify({ error: "[v1.0.5] Aba 'Solicitações' não encontrada." }))
             .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -339,7 +339,7 @@ function handlePowerShellQueueRequest() {
     }
 
     if (usersToReset.length === 0) {
-        return ContentService.createTextOutput(JSON.stringify({ error: "[v1.0.0] Fila Vazia." }))
+        return ContentService.createTextOutput(JSON.stringify({ error: "[v1.0.5] Fila Vazia." }))
             .setMimeType(ContentService.MimeType.JSON);
     }
 
