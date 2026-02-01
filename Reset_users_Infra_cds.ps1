@@ -5,7 +5,7 @@ Write-Host "--- VERSÃO 1.0.5 CARREGADA ---" -ForegroundColor Cyan
 # CONFIGURAÇÃO CENTRAL
 # ==========================================================================
 # COLE AQUI A SUA URL DA IMPLANTAÇÃO (EXEC):
-$API_URL = "https://script.google.com/macros/s/AKfycbzUIefAXuloflIzC8aNSc5YU3DAX9Ih6B6NH4Of_3pr_Aicn3VoivsaNYBGm1laLOPB/exec"
+$API_URL = "https://script.google.com/a/macros/luizalabs.com/s/AKfycbxZQ-DKYmIjhhETaFoGsc_gruXC2QgdBH8tv29Fet46A6f-5XQUmTmsK9lhkAeF_PM/exec"
 
 # --- PRÉ-REQUISITOS DE SEGURANÇA ---
 # --- PRÉ-REQUISITOS DE SEGURANÇA ---
