@@ -194,27 +194,27 @@ function computeHash(message, salt) {
 // 5. RECUPERAÇÃO DE SENHA (Esqueci Senha)
 function requestPasswordReset(email) {
     if (!email) throw new Error("Email é obrigatório.");
-    
+
     const sheet = getAuthSheet();
     const data = sheet.getDataRange().getValues();
-    
+
     for (let i = 1; i < data.length; i++) {
         if (String(data[i][2]).toLowerCase() === String(email).toLowerCase()) {
             // Verificar se usuário está ativo
             if (String(data[i][5]) !== "ATIVO") {
                 throw new Error("Usuário não está ativo. Entre em contato com o administrador.");
             }
-            
+
             // Gerar senha temporária
             const tempPass = Math.random().toString(36).slice(-8);
             const salt = Utilities.getUuid();
             const hash = computeHash(tempPass, salt);
-            
+
             // Atualizar senha e marcar como primeiro acesso
             sheet.getRange(i + 1, 4).setValue(hash);
             sheet.getRange(i + 1, 5).setValue(salt);
             sheet.getRange(i + 1, 7).setValue("TRUE"); // Força troca de senha no próximo login
-            
+
             // Enviar email com senha temporária
             try {
                 MailApp.sendEmail({
@@ -235,11 +235,11 @@ function requestPasswordReset(email) {
             } catch (emailErr) {
                 throw new Error("Erro ao enviar email: " + emailErr.message);
             }
-            
+
             return { success: true, message: "Email de recuperação enviado com sucesso!" };
         }
     }
-    
+
     throw new Error("Email não encontrado no sistema.");
 }
 
@@ -301,7 +301,7 @@ function handlePowerShellQueueRequest() {
 
     let usersToReset = [];
 
-    const qData = sheetQueue.getDataRange().getDisplayValues(); 
+    const qData = sheetQueue.getDataRange().getDisplayValues();
     if (qData.length > 1) {
         for (let i = 1; i < qData.length; i++) {
             let row = qData[i];
@@ -353,7 +353,7 @@ function handlePowerShellQueueRequest() {
 function ATUALIZAR_CADASTRO_ANALISTAS() {
     const ss = SpreadsheetApp.openById(ID_PLANILHA_GESTAO);
     let sheet = ss.getSheetByName("Analistas");
-    
+
     if (!sheet) {
         sheet = ss.insertSheet("Analistas");
         sheet.appendRow(["ID_MAGALU", "NOME", "EMAIL", "SITUACAO_RH", "DATA_ATUALIZACAO"]);
@@ -401,7 +401,7 @@ function ATUALIZAR_CADASTRO_ANALISTAS() {
         const cleanId = String(id).replace(/\D/g, "");
         const data = resultMap.get(cleanId);
         if (data) {
-            const nomeFormatado = toTitleCase(data.nome); 
+            const nomeFormatado = toTitleCase(data.nome);
             const emailMinusculo = String(data.email).toLowerCase();
             outputData.push([nomeFormatado, emailMinusculo, data.situacao, timestamp]);
         } else {
@@ -415,7 +415,7 @@ function ATUALIZAR_CADASTRO_ANALISTAS() {
 
 function toTitleCase(str) {
     if (!str) return "";
-    return String(str).toLowerCase().split(' ').map(function(word) {
+    return String(str).toLowerCase().split(' ').map(function (word) {
         return (word.charAt(0).toUpperCase() + word.slice(1));
     }).join(' ');
 }
@@ -432,7 +432,7 @@ function getAnalystsList() {
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) return [];
 
-    const data = sheet.getRange(2, 2, lastRow - 1, 3).getValues(); 
+    const data = sheet.getRange(2, 2, lastRow - 1, 3).getValues();
 
     const activeAnalysts = data
         .filter(r => {
@@ -474,29 +474,44 @@ function getFiliaisList() {
 
 function searchUsersWeb(term, filial) {
     if (!term) term = "";
+    if (!filial) filial = "";
+
     const sanTerm = String(term).replace(/'/g, "").toUpperCase().trim();
     const sanFilial = String(filial).replace(/'/g, "").trim();
 
-    if (!sanFilial) throw new Error("Filial Obrigatória");
+    if (!sanTerm && !sanFilial) throw new Error("Informe ao menos um critério de busca (Filial ou Termo).");
+
+    let whereClause = "WHERE t2.SITUACAO = 'Em Atividade Normal'";
+
+    // Filtro por Filial (Opcional)
+    if (sanFilial) {
+        whereClause += ` AND CAST(t2.FILIAL AS STRING) = '${sanFilial}'`;
+    }
+
+    // Filtro por Termo (Opcional, mas se existir, busca em ID, Nome, User)
+    if (sanTerm) {
+        whereClause += ` AND (
+            UPPER(t1.user_name) LIKE '%${sanTerm}%' 
+            OR UPPER(t2.NOME) LIKE '%${sanTerm}%'
+            OR CAST(t2.ID AS STRING) LIKE '%${sanTerm}%'
+            OR UPPER(t1.email) LIKE '%${sanTerm}%'
+        )`;
+    }
 
     const sql = `
         SELECT 
+            t2.ID,
             t1.user_name,
             t2.NOME,
             t2.CARGO,
             t1.email,
-            t2.CENTRO_CUSTO
+            t2.CENTRO_CUSTO,
+            t2.FILIAL
         FROM \`maga-bigdata.kirk.assignee\` AS t1
         INNER JOIN \`maga-bigdata.mlpap.mag_v_funcionarios_ativos\` AS t2 
             ON t1.CUSTOM1 = CAST(t2.ID AS STRING)
-        WHERE 
-            CAST(t2.FILIAL AS STRING) = '${sanFilial}'
-            AND t2.SITUACAO = 'Em Atividade Normal'
-            AND (
-                UPPER(t1.user_name) LIKE '%${sanTerm}%' 
-                OR UPPER(t2.NOME) LIKE '%${sanTerm}%'
-                OR CAST(t2.ID AS STRING) LIKE '%${sanTerm}%'
-            )
+        ${whereClause}
+        LIMIT 100
     `;
 
     try {
@@ -504,13 +519,15 @@ function searchUsersWeb(term, filial) {
         let auditados = getUsuariosAuditados();
 
         return rows.map(row => {
-            let uName = row[0];
+            let uName = row[1];
             return {
+                id: row[0],
                 user_name: uName,
-                nome: row[1],
-                cargo: row[2],
-                email: row[3],
-                centro_custo: row[4],
+                nome: row[2],
+                cargo: row[3],
+                email: row[4],
+                centro_custo: row[5],
+                filial: row[6],
                 ja_resetado: auditados.has(String(uName).toUpperCase().trim())
             };
         });
@@ -603,14 +620,14 @@ function doPost(e) {
         const emailGestor = data.email_gestor || "";
         const emailColab = data.email_colaborador || "";
         const emailStatus = data.email_status || "N/A"; // Status do envio de email
-        
+
         sheetAudit.appendRow([
-            data.data_hora, 
-            data.filial, 
-            data.user_name, 
-            data.nova_senha, 
-            data.status, 
-            data.executor, 
+            data.data_hora,
+            data.filial,
+            data.user_name,
+            data.nova_senha,
+            data.status,
+            data.executor,
             emailColab,
             emailGestor,
             data.centro_custo,
@@ -630,14 +647,14 @@ function doPost(e) {
                     }
                 }
             }
-        } catch (eFila) {}
+        } catch (eFila) { }
 
         // Email é enviado pelo PowerShell via SMTP (DL: suporte-infra-cds@luizalabs.com)
         // Backend apenas registra log e atualiza fila
 
         return ContentService.createTextOutput("Sucesso").setMimeType(ContentService.MimeType.TEXT);
-    } catch (err) { 
-        return ContentService.createTextOutput("Erro Interno: " + err.message).setMimeType(ContentService.MimeType.TEXT); 
+    } catch (err) {
+        return ContentService.createTextOutput("Erro Interno: " + err.message).setMimeType(ContentService.MimeType.TEXT);
     }
 }
 
@@ -740,7 +757,7 @@ function fetchLeadersEmails(filial, centroCusto) {
         console.log("Nenhum líder encontrado na filial " + sanFilial);
         return [];
     }
-    
+
     const emailsFilial = rowsFilial.map(r => r[0]).filter(e => e && e.includes('@'));
     console.log("Líderes encontrados na FILIAL (fallback): " + emailsFilial.join(", "));
     return emailsFilial;

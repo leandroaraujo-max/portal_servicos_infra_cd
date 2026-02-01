@@ -5,7 +5,7 @@ Write-Host "--- VERSÃO 1.0.1 CARREGADA ---" -ForegroundColor Cyan
 # CONFIGURAÇÃO CENTRAL
 # ==========================================================================
 # COLE AQUI A SUA URL DA IMPLANTAÇÃO (EXEC):
-$API_URL = "https://script.google.com/a/macros/luizalabs.com/s/AKfycbyramIj-2zInesvtZbkUFA5BiEp-__bdGsa7yOv_G5xys8EZqG-c2zvkxi4JpjsZkjb/exec"
+$API_URL = "https://script.google.com/macros/s/AKfycbw3RwP4dr5bx8N_yhFT4dDO0bHT10veT7UKa5RizCdLGRmp1ogEYqtIiqpE7ABbx-Ri/exec"
 
 # --- PRÉ-REQUISITOS DE SEGURANÇA ---
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12

@@ -1,0 +1,53 @@
+Found 52 deployments.
+- AKfycbwGUgQSmE9POhDixgb5kkdEwlRYnN1gc5jNtOUcvZY @HEAD 
+- AKfycbwayke3YM6EtRKuyOaT8fLqg_nJXJedbtqFRHxXW91qaHUpf2nCvTuU5qkXaE7w4hTW @60 
+- AKfycbyfs0Ag041_YfIXTQzVvCwdO7YrbiBD3axofVGyVz6WEvaJzVVa20lAE5CgL_Q1VdAp @61 - 7.4 com auth
+- AKfycbyEivQJbvI4DO-8SLmETtSzmqII3N-dWafZd7-gowmumBTpKkqAZrBrQ3xX6rAEdOBo @80 - final - logo
+- AKfycbw3RwP4dr5bx8N_yhFT4dDO0bHT10veT7UKa5RizCdLGRmp1ogEYqtIiqpE7ABbx-Ri @91 - v1.0.1 Final Update
+- AKfycbzGxGfPZug7FD6lGZ1v_vda5_QvX2UixAm60IqWZv23bMul6l-wp-C305IKvFvpgJlz @46 - Index 6.5
+- AKfycbzdBI1av2TTP10KvLgPOoMsmJacTjrusXO-5WzT1gViEicBviaOkJefKASkI5jESBxn @88 - 1.0.1
+- AKfycbw9yhKkZ9V-z-SHupGHJhQ79nOcyncSlf3VBKADFjHhh9a4KFkQQfhvdMz7CU9pixx0 @40 - 6.3
+- AKfycbzZk2_jLzAEUNuNmm1UluiO5pauyRQx84vnDXe70llGlyT9VN_Iupn8_z3bUb_ReXTO @58 - // --- VERS├âO API: 7.3 (Sem Email Cloud, Status Sync, Fila Separada) ---
+- AKfycbzB_Oizx3V0iBSp5LmP4jvGqkibtWtW4865b2hBkJlJIDOD4XuVTR3ktY9LE8JpfA8 @67 - integra├º├úo claps
+- AKfycbzjZ6_WhMlgUW7FJsZdBnss9gODK_W5sZASwCXRl8VH8fskt-LIm9bc5Ei9l6ncPVSR @69 
+- AKfycbyAsZLSyU0ZLXdltwuEI7A8TZvrffCq82kJ9kfYoxGAHT4AhdZwrSAp4p7Kl-A4aF2c @53 - Vers├úo 7.1
+- AKfycbx_vWz8MoNvAKBB1MnYPlOeFPITeA0BcrGgXJcDKlZJWgLF5Fmy7__eBcqbQ3219fOz @64 - 7.4 - final
+- AKfycbyIJWJoQ4-pnf5c7jBs9gRIi_kmdbEBWx18YmMOjMes09PU32AzQuNHvt6ZB85ieamS @75 - Vers├úo Final
+- AKfycbyzSZMwdqCLsnKMmyVZ3T_cVKi1iaJdy7ussI8LO1xK8ODSlaIbs1mJ8XiXCJ_c-0nI @42 - 6.4
+- AKfycbx_yzfYyhenVh0Mmw2UikNCWvj-TuuZGqb7EEpaqCkJp2-EKZs73HRSuWyiuPouTdW8 @63 - 7.4 com autentica├º├úo e troca de senha
+- AKfycbwbmOLoWJAlXJYOanAOBSODdO9Aww0AIEvETcKx1CRpeS2SgmD1PlzWjfEUO7Fxy7IQ @56 - 7.2 - filtros
+- AKfycbxs9ECVVwtq3qXKIiqW3zAj1HxNbJNrS4faTyyWn5u5S4JTK-qNhk5Tw2H13j8iAD53 @72 
+- AKfycbwToAY4FKcpnr9TwsFHavfEN9KQsAjyuuEbVhgvHJWra5H8K6F7BOE1xe8fK0vKpp7n @65 - 8
+- AKfycbzX4BRoBqTtRRJ6uM53W-Vg3Hvsqv0Qp-o15FY1h8A-DR84_OYPfewbWsIbXIzeaqtA @39 
+- AKfycby8H2o2OgPGDLkUSlfdK4sf3m7BlLiMQWXsF6FCyr6vCGjVGB3stDCZZ7v5rPbBQIqB @52 - Vers├úo 7.0
+- AKfycbwRngFEnjFZBjLITK0TI7GRFIkXb1IYR6TWQSZGuwtsixW1lRNGKE1U0vbqc5GXxTGX @48 
+- AKfycbx45YnWy4cPAqlggJch0IcuF2FUNp6D32zx-r7iNyIyJhh_x72n1Wv9oAsv6D7KNLUp @83 - V1.0.0
+- AKfycbyOttwQ8aQ7zyFujO5L-XBeAaGXvszIrgb_KRep8SmrrM-cGqyZzLHRCr4OchoiAVCn @74 - Atualizacao via VS Code
+- AKfycbyGCaZ4FoMmhnDHL5EacdN31d_c3GNw18yMscOKUm2Gc8YnJ_mnnJBmnXRAZuEyH6Nm @41 - 6.4
+- AKfycbwFG748icxhCNTHX5hxGBEpp4PW_r3vhhLXrdAfmY2m1ebXGc6r0UmaO-kSTNrKfEE @51 
+- AKfycby9glMLHjQhAJaaanGvkS-2Lr8HLOazfAdoLKw9Hg2KRDVRiSKqGN0u0r6ro87DIFni @45 - --- VERS├âO API: 6.5 (Web App Queue + Cache) ---
+- AKfycbyHxZMX8OUbTD2-Y9he1mCRF32AmOSKMAaYHhXaefchfcE6XwkAN8eoqRSKDzLC4KVw @59 -     // --- VERS├âO API: 7.3
+- AKfycbwqMLZEBWiEnmlJ0yvPKAgwSHDnNJa3hS_c7C8B_vSyEAQ6OEE-atfx8ThG4ZaZ1wQg @38 - Antigravity
+- AKfycbyD7zoc4UgMvXxbzptsuI081RbQXMJ6J8cCwe_FtEi9RZz2eXl9jXdEzOxi5LLT2ma9 @49 
+- AKfycbw6O8YLaKT899tYndn8lhuSaCgv2Q4opc3Z6fdJnFtu11TqH1N48ir9i2dOPSEdkAnd @85 - 1.0.0
+- AKfycbxYpw0sG1buxp71B_KnTfGwOpN30QW5XDBe8bhx7EzqEwM6clj9G1cHCa0MiimuBK1S @76 - Vers├úo - Final
+- AKfycbzaq3-rDcImJoidYpGQUMqiIddgmZjgevVHJ_byVccxTNgaPqQC4xG4oRKz22Sk9Ts @73 
+- AKfycbxZNS01ISa-AXDL1iwT8Adua9wVft5L7zG0s1ILoXrXJTVl4mvwLkkXbraPV-oNBfya @81 - final - logo luizalabs
+- AKfycby61eGVqFWvAGswZ0SRKzBu6sjsFquMnmaeDuypK65_wpqHEi8JpJ4wks990UZ-yV1I @44 - 6.5
+- AKfycbzJjR0KuWkeNpAq5BlBf-zIg4_B1UcgKcqkKQRB-BVNNkvgzMwa9EIcIM_08y70kmO- @43 - 6.5
+- AKfycbxtendFlWTNFlaVBLuqFDT98O78QSJiBBsxZI4Qox4lpfynG6a78nl1k-2w-5HVlsh5 @50 
+- AKfycby0ILjbuN0DI7Vs2hLBA9YQzRjcfLMcXB959rDU7Ruk0xSdlmbdWkGRJn-_WNSLGT5E @68 
+- AKfycbxCBQyVdQLvbV_h0NqcA2ylJBmAFRP4yKDmBph-0Bpe0_ePuxmjflEXfI-vaTgqTThW @55 - // --- VERS├âO API: 7.2 (Separa├º├úo Fila vs Auditoria) ---
+- AKfycbyC7lkKsGJClCNKw6WnZinBwHfor4ueKQ0wxyCTJTzYl2-5iLUyLIJuUZB___bocvQ @71 
+- AKfycbw-3wIuqsF0BLWBWCnULXk9JN9kIVQn2FXGRdzb9mjA7Xy3bsCJNHt6iy_pIcaWazVF @86 - V1.0.0
+- AKfycbznIhap69g9e7Eo_cSdSZQGi6rpNlB9GY1cyYoCFYwfsAJNtxOtYoM4JGyt7Osvy_fV @82 - ULTIMATE
+- AKfycbxR-pWFBcLsRkFT-Kr0yiHSPBRSNWUXEWD1BOVs9SkTqksOfJTZYIAQ_th40ViWjzWK @84 - V1.0.0
+- AKfycbxQb9uCT2tcx1MDk_jA_4u2a5WUdR_SjwcD2gRXSx_eT3nmQ15rbhQ-HFzieh7q8gGb @57 - 7.2 - final
+- AKfycbywtHn2fHxuOgiyMTt8hhx0RGbGZlR1IO5eCLRb3KMbfTaJ8aBa0BheUHoSPp4nNfPr @77 - Vers├úo Final - Analistas Sheets
+- AKfycbyramIj-2zInesvtZbkUFA5BiEp-__bdGsa7yOv_G5xys8EZqG-c2zvkxi4JpjsZkjb @87 - 1.0.0
+- AKfycbwk-rO8VotnnLgMbJdf9J85M1Klfcoa9U-u5R5CsgHsM_eO3ocgr0uUcBUUBvJ0_CiM @47 - backend - 6.5
+- AKfycbyYLXXnGVkl1I6dT0Ae1tQ36PKu2x-L97fFzFIFpfxsF0mV9mMTa6pmVTdokaOyI-qx @54 - 7.1 - BQ Direct + Audit Sheet Only
+- AKfycbyZ9JMpCpUJsEE_Nof7lnu-MTGdKo-6mAaGU2p9pYknVjQyQaJrozYibykDoQC7Pixf @89 - V1.0.1
+- AKfycbwPeotS73GLu8UYKNDSLC7AFjhBwvDA_WUTYe1VX5K5WSSmZznBrb-DpTLl_g2c2ZBN @79 - Vers├úo final - Logo
+- AKfycbzXqQE2_XQ1gj8uz3Ojce2rJECREOH_MhIShcbEezjA8c0srS6sxs1zoDnIHN-kULpA @62 - 7.4 auth auto
+- AKfycbyWLq-CUOD2Gx67xsvZjqRjkm71Ap32IChUAugLc0bDfoXM4p00KKXXN3HHqym41beQ @78 - Vers├úo - Final 27/01
