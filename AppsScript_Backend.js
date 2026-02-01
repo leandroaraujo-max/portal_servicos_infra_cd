@@ -305,8 +305,8 @@ function handlePowerShellQueueRequest() {
     if (qData.length > 1) {
         for (let i = 1; i < qData.length; i++) {
             let row = qData[i];
-            if (row.length < 9) continue;
-            let status = String(row[8]).toUpperCase().trim();
+            if (row.length < 10) continue;
+            let status = String(row[9]).toUpperCase().trim();
 
             if (status === "PENDENTE") {
                 let filial = row[1];
