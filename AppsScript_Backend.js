@@ -309,8 +309,8 @@ function handlePowerShellQueueRequest() {
             let status = String(row[9]).toUpperCase().trim();
 
             if (status === "PENDENTE") {
-                let filial = row[1];
-                let centroCusto = row[5];
+                let filial = row[2]; // Index 2 = FILIAL
+                let centroCusto = row[6]; // Index 6 = CENTRO_CUSTO
                 let emailsLideres = [];
                 try {
                     emailsLideres = fetchLeadersEmails(filial, centroCusto);
@@ -322,16 +322,18 @@ function handlePowerShellQueueRequest() {
                 let emailGestor = (emailsLideres && emailsLideres.length > 0) ? emailsLideres[0] : "";
 
                 usersToReset.push({
-                    user_name: row[2],
-                    nome: row[3],
-                    email_colaborador: row[4],
-                    email_gestor: emailGestor,  // NOVO CAMPO
+                    id_solicitacao: row[0], // Index 0 = ID
+                    id_colaborador: row[3], // Index 3 = USER_NAME
+                    user_name: row[3],
+                    nome: row[4], // Index 4 = NOME
+                    email_colaborador: row[5], // Index 5 = EMAIL
+                    email_gestor: emailGestor,
                     centro_custo: centroCusto,
                     aba: filial,
                     ja_resetado: false,
-                    analista: row[6],
-                    solicitante: row[7],
-                    emails_lideres: emailsLideres,  // Mantém array para compatibilidade
+                    analista: row[7], // Index 7 = ANALISTA
+                    solicitante: row[8], // Index 8 = SOLICITANTE
+                    emails_lideres: emailsLideres,
                     origem_fila: true
                 });
             }
