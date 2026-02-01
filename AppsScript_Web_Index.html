@@ -12,9 +12,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
+        :root {
+            --magalu-blue: #0086FF;
+            --magalu-blue-dark: #0066CC;
+            --magalu-blue-darker: #004499;
+            --magalu-pink: #E91E76;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            background-color: #f0f4f8;
         }
 
         .fade-enter-active,
@@ -45,6 +52,94 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #a8a8a8;
         }
+
+        /* Rainbow Strip - Magalu Colors */
+        .rainbow-strip {
+            height: 4px;
+            background: linear-gradient(90deg,
+                    #E91E76 0%,
+                    #FF5722 16%,
+                    #FF9800 32%,
+                    #4CAF50 48%,
+                    #2196F3 64%,
+                    #9C27B0 80%,
+                    #E91E76 100%);
+            background-size: 200% 100%;
+            animation: rainbow-flow 8s linear infinite;
+        }
+
+        @keyframes rainbow-flow {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            100% {
+                background-position: 200% 50%;
+            }
+        }
+
+        /* Gradient Header */
+        .header-gradient {
+            background: linear-gradient(135deg, var(--magalu-blue-darker) 0%, var(--magalu-blue-dark) 50%, var(--magalu-blue) 100%);
+        }
+
+        /* Card Hover Effects */
+        .card-hover {
+            transition: all 0.2s ease;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Status Badges - Enhanced */
+        .badge-pending {
+            background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+            color: #92400E;
+            border: 1px solid #F59E0B;
+        }
+
+        .badge-success {
+            background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
+            color: #065F46;
+            border: 1px solid #10B981;
+        }
+
+        .badge-error {
+            background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+            color: #991B1B;
+            border: 1px solid #EF4444;
+        }
+
+        /* Button Primary - Magalu Style */
+        .btn-magalu {
+            background: linear-gradient(135deg, var(--magalu-blue) 0%, var(--magalu-blue-dark) 100%);
+            transition: all 0.2s ease;
+        }
+
+        .btn-magalu:hover {
+            background: linear-gradient(135deg, var(--magalu-blue-dark) 0%, var(--magalu-blue-darker) 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 134, 255, 0.4);
+        }
+
+        /* Input Focus - Enhanced */
+        input:focus,
+        select:focus {
+            border-color: var(--magalu-blue) !important;
+            box-shadow: 0 0 0 3px rgba(0, 134, 255, 0.15) !important;
+        }
+
+        /* Table Row Hover */
+        .table-row-hover:hover {
+            background-color: #EFF6FF !important;
+        }
+
+        /* Avatar Glow */
+        .avatar-glow {
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+        }
     </style>
 </head>
 
@@ -53,14 +148,25 @@
     <div id="app" class="flex flex-col h-full">
 
         <div v-if="currentView === 'login'"
-            class="flex min-h-full items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50 h-full">
-            <div class="w-full max-w-md space-y-8">
-                <div class="text-center flex flex-col items-center">
-                    <img :src="appLogo" alt="LuizaLabs" class="h-16 w-auto mb-4 object-contain">
+            class="flex min-h-full items-center justify-center py-12 px-4 sm:px-6 lg:px-8 h-full"
+            style="background: linear-gradient(135deg, #004499 0%, #0066CC 50%, #0086FF 100%);">
 
-                    <h2 class="mt-2 text-3xl font-bold tracking-tight text-gray-900">Reset de Usuários</h2>
-                    <p class="text-sm font-medium text-gray-500">Suporte Infra CDs</p>
-                    <p class="mt-2 text-sm text-gray-600">
+            <!-- Rainbow Strip no topo -->
+            <div class="rainbow-strip fixed top-0 left-0 right-0"></div>
+
+            <div
+                class="w-full max-w-md space-y-8 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20">
+                <div class="text-center flex flex-col items-center">
+                    <div class="bg-gradient-to-br from-blue-500 to-blue-700 p-4 rounded-2xl shadow-lg mb-4">
+                        <svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z">
+                            </path>
+                        </svg>
+                    </div>
+                    <h2 class="mt-2 text-3xl font-bold tracking-tight text-gray-900">AD Reset Tool</h2>
+                    <p class="text-sm font-medium text-blue-600">Suporte Infra CDs</p>
+                    <p class="mt-2 text-sm text-gray-500">
                         Faça login para acessar a ferramenta
                     </p>
                 </div>
@@ -96,7 +202,7 @@
 
                     <div>
                         <button type="submit" :disabled="isLoading"
-                            class="group relative flex w-full justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50">
+                            class="btn-magalu group relative flex w-full justify-center rounded-lg border border-transparent py-3 px-4 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50">
                             {{ isLoading ? 'Entrando...' : 'Entrar' }}
                         </button>
                     </div>
@@ -108,19 +214,32 @@
                             class="font-medium text-blue-600 hover:text-blue-500">Solicitar Acesso</a>
                     </p>
                 </div>
-                <!-- Versão no canto inferior direito -->
-                <div class="fixed bottom-2 right-4 text-xs text-gray-400">
-                    v1.0.1
+                <!-- Versão no canto inferior -->
+                <div class="text-center text-xs text-gray-400 pt-4 border-t border-gray-100">
+                    v1.0.5 • Leandro Araújo
                 </div>
             </div>
         </div>
 
         <div v-if="currentView === 'register'"
-            class="flex min-h-full items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50 h-full">
-            <div class="w-full max-w-md space-y-8">
-                <div class="text-center">
-                    <h2 class="mt-6 text-3xl font-bold tracking-tight text-gray-900">Solicitar Acesso</h2>
-                    <p class="mt-2 text-sm text-gray-600">Informe seu ID Magalu para localizar seu cadastro.</p>
+            class="flex min-h-full items-center justify-center py-12 px-4 sm:px-6 lg:px-8 h-full"
+            style="background: linear-gradient(135deg, #004499 0%, #0066CC 50%, #0086FF 100%);">
+
+            <!-- Rainbow Strip no topo -->
+            <div class="rainbow-strip fixed top-0 left-0 right-0"></div>
+
+            <div
+                class="w-full max-w-md space-y-8 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20">
+                <div class="text-center flex flex-col items-center">
+                    <div class="bg-gradient-to-br from-green-500 to-green-700 p-4 rounded-2xl shadow-lg mb-4">
+                        <svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z">
+                            </path>
+                        </svg>
+                    </div>
+                    <h2 class="mt-2 text-3xl font-bold tracking-tight text-gray-900">Solicitar Acesso</h2>
+                    <p class="mt-2 text-sm text-gray-500">Informe seu ID Magalu para localizar seu cadastro.</p>
                 </div>
                 <form class="mt-8 space-y-6" @submit.prevent="handleRegister">
                     <div class="shadow-sm space-y-4">
@@ -128,46 +247,82 @@
                             <label for="reg-id" class="sr-only">ID Magalu</label>
                             <div class="flex">
                                 <input id="reg-id" name="id" type="text" required v-model="authForm.id"
-                                    class="relative block w-full rounded-l-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                                    class="relative block w-full rounded-l-lg border border-gray-300 px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
                                     placeholder="ID Magalu (Números)" @blur="fetchUserData" :disabled="isLoading">
                                 <button type="button" @click="fetchUserData" :disabled="isLoading"
-                                    class="relative -ml-px inline-flex items-center space-x-2 rounded-r-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                                    Buscar
+                                    class="relative -ml-px inline-flex items-center space-x-2 rounded-r-lg border border-gray-300 bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                    <span>Buscar</span>
                                 </button>
                             </div>
                         </div>
 
                         <div v-if="authForm.name"
-                            class="bg-blue-50 p-4 rounded-md border border-blue-100 animate-fade-in">
-                            <p class="text-xs text-blue-500 uppercase font-bold">Colaborador Encontrado:</p>
-                            <p class="text-sm font-medium text-gray-900 mt-1">{{ authForm.name }}</p>
-                            <p class="text-sm text-gray-600">{{ authForm.email }}</p>
+                            class="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200 animate-fade-in">
+                            <div class="flex items-center">
+                                <div class="bg-green-100 p-2 rounded-full mr-3">
+                                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-green-600 uppercase font-bold">Colaborador Encontrado</p>
+                                    <p class="text-sm font-semibold text-gray-900">{{ authForm.name }}</p>
+                                    <p class="text-xs text-gray-600">{{ authForm.email }}</p>
+                                </div>
+                            </div>
                         </div>
-                        <div v-if="authForm.errorMessage" class="text-red-500 text-xs text-center">
+                        <div v-if="authForm.errorMessage"
+                            class="bg-red-50 text-red-600 text-sm text-center p-3 rounded-lg border border-red-200">
                             {{ authForm.errorMessage }}
                         </div>
                     </div>
 
                     <div>
                         <button type="submit" :disabled="isLoading || !authForm.name"
-                            class="group relative flex w-full justify-center rounded-md border border-transparent bg-green-600 py-2 px-4 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                            class="group relative flex w-full justify-center rounded-lg border border-transparent py-3 px-4 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
                             {{ isLoading ? 'Enviando...' : 'Solicitar Acesso' }}
                         </button>
                     </div>
                 </form>
-                <div class="text-center">
+                <div class="text-center pt-4 border-t border-gray-100">
                     <a href="#" @click.prevent="currentView = 'login'"
-                        class="font-medium text-blue-600 hover:text-blue-500">Voltar para Login</a>
+                        class="font-medium text-blue-600 hover:text-blue-500 flex items-center justify-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Voltar para Login
+                    </a>
                 </div>
             </div>
         </div>
 
         <div v-if="currentView === 'change_password'"
-            class="flex min-h-full items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50 h-full">
-            <div class="w-full max-w-md space-y-8">
-                <div class="text-center">
-                    <h2 class="mt-6 text-3xl font-bold tracking-tight text-gray-900">Primeiro Acesso</h2>
-                    <p class="mt-2 text-sm text-gray-600">Por segurança, defina sua nova senha.</p>
+            class="flex min-h-full items-center justify-center py-12 px-4 sm:px-6 lg:px-8 h-full"
+            style="background: linear-gradient(135deg, #004499 0%, #0066CC 50%, #0086FF 100%);">
+
+            <!-- Rainbow Strip no topo -->
+            <div class="rainbow-strip fixed top-0 left-0 right-0"></div>
+
+            <div
+                class="w-full max-w-md space-y-8 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20">
+                <div class="text-center flex flex-col items-center">
+                    <div class="bg-gradient-to-br from-blue-500 to-blue-700 p-4 rounded-2xl shadow-lg mb-4">
+                        <svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z">
+                            </path>
+                        </svg>
+                    </div>
+                    <h2 class="mt-2 text-3xl font-bold tracking-tight text-gray-900">Primeiro Acesso</h2>
+                    <p class="mt-2 text-sm text-gray-500">Por segurança, defina sua nova senha.</p>
                 </div>
                 <form class="mt-8 space-y-6" @submit.prevent="handleChangePassword">
                     <div class="-space-y-px rounded-md shadow-sm">
@@ -191,96 +346,147 @@
 
                     <div>
                         <button type="submit" :disabled="isLoading"
-                            class="group relative flex w-full justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50">
+                            class="btn-magalu group relative flex w-full justify-center rounded-lg border border-transparent py-3 px-4 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50">
                             {{ isLoading ? 'Salvando...' : 'Definir Senha' }}
                         </button>
                     </div>
                 </form>
+                <div class="text-center pt-4 border-t border-gray-100">
+                    <a href="#" @click.prevent="currentView = 'app'"
+                        class="font-medium text-blue-600 hover:text-blue-500 flex items-center justify-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Voltar para a Aplicação
+                    </a>
+                </div>
             </div>
         </div>
 
         <!-- View Esqueci Senha -->
         <div v-if="currentView === 'forgot_password'"
-            class="flex min-h-full items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50 h-full">
-            <div class="w-full max-w-md space-y-8">
+            class="flex min-h-full items-center justify-center py-12 px-4 sm:px-6 lg:px-8 h-full"
+            style="background: linear-gradient(135deg, #004499 0%, #0066CC 50%, #0086FF 100%);">
+
+            <!-- Rainbow Strip no topo -->
+            <div class="rainbow-strip fixed top-0 left-0 right-0"></div>
+
+            <div
+                class="w-full max-w-md space-y-8 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20">
                 <div class="text-center flex flex-col items-center">
-                    <img :src="appLogo" alt="LuizaLabs" class="h-16 w-auto mb-4 object-contain">
+                    <div class="bg-gradient-to-br from-amber-500 to-orange-600 p-4 rounded-2xl shadow-lg mb-4">
+                        <svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                    </div>
                     <h2 class="mt-2 text-3xl font-bold tracking-tight text-gray-900">Recuperar Senha</h2>
-                    <p class="mt-2 text-sm text-gray-600">
+                    <p class="mt-2 text-sm text-gray-500">
                         Informe seu email corporativo para receber as instruções de recuperação.
                     </p>
                 </div>
                 <form class="mt-8 space-y-6" @submit.prevent="handleForgotPassword">
-                    <div class="rounded-md shadow-sm">
+                    <div class="rounded-lg shadow-sm">
                         <div>
                             <label for="forgot-email" class="sr-only">Email</label>
                             <input id="forgot-email" name="email" type="email" autocomplete="email" required
                                 v-model="authForm.email"
-                                class="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                                class="relative block w-full appearance-none rounded-lg border border-gray-300 px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
                                 placeholder="Email corporativo">
                         </div>
                     </div>
                     <div>
                         <button type="submit" :disabled="isLoading"
-                            class="group relative flex w-full justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50">
+                            class="group relative flex w-full justify-center rounded-lg border border-transparent py-3 px-4 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 transition-all"
+                            style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);">
                             {{ isLoading ? 'Enviando...' : 'Enviar Instruções' }}
                         </button>
                     </div>
                 </form>
-                <div class="text-center">
+                <div class="text-center pt-4 border-t border-gray-100">
                     <a href="#" @click.prevent="currentView = 'login'"
-                        class="font-medium text-blue-600 hover:text-blue-500">Voltar para Login</a>
+                        class="font-medium text-blue-600 hover:text-blue-500 flex items-center justify-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Voltar para Login
+                    </a>
                 </div>
             </div>
         </div>
 
         <div v-if="currentView === 'app'" class="flex flex-col h-full">
 
-            <header class="bg-blue-800 text-white shadow-lg z-10">
+            <header class="header-gradient text-white shadow-lg z-10">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     <div class="flex items-center space-x-8">
                         <div class="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
                             @click="currentTab = 'new'">
-                            <img :src="appLogo" alt="LuizaLabs" class="h-8 w-auto mr-2 brightness-0 invert">
-
+                            <div class="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z">
+                                    </path>
+                                </svg>
+                            </div>
                             <span class="font-bold text-xl tracking-tight leading-none">
-                                Reset de Usuários
-                                <span class="ml-2 text-xs bg-blue-600 px-2 py-0.5 rounded">v1.0.1</span>
+                                AD Reset Tool
+                                <span
+                                    class="ml-2 text-xs bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full">v1.0.5</span>
                                 <br>
-                                <span class="text-xs font-normal text-blue-200">Suporte Infra CDs</span>
+                                <span class="text-xs font-normal text-blue-200/80">Suporte Infra CDs</span>
                             </span>
                         </div>
-                        <div class="hidden md:flex space-x-1">
+                        <div class="hidden md:flex space-x-1 bg-white/10 rounded-lg p-1">
                             <button @click="currentTab = 'new'"
-                                :class="{'bg-blue-900 text-white': currentTab === 'new', 'text-blue-200 hover:bg-blue-700 hover:text-white': currentTab !== 'new'}"
-                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors">Nova
-                                Solicitação</button>
+                                :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'new', 'text-white/80 hover:text-white hover:bg-white/10': currentTab !== 'new'}"
+                                class="px-4 py-2 rounded-md text-sm font-medium transition-all">
+                                <span class="flex items-center">
+                                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                    Nova Solicitação
+                                </span>
+                            </button>
                             <button @click="loadQueue"
-                                :class="{'bg-blue-900 text-white': currentTab === 'queue', 'text-blue-200 hover:bg-blue-700 hover:text-white': currentTab !== 'queue'}"
-                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center">Fila
-                                de Acompanhamento</button>
+                                :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'queue', 'text-white/80 hover:text-white hover:bg-white/10': currentTab !== 'queue'}"
+                                class="px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center">
+                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                                </svg>
+                                Fila de Acompanhamento
+                            </button>
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
                         <button @click="initiateChangePassword" title="Trocar Senha"
-                            class="text-blue-200 hover:text-white mr-2">
+                            class="text-white/70 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-all">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z">
+                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
                                 </path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                             </svg>
                         </button>
                         <div class="text-right hidden sm:block">
                             <div class="text-sm font-medium">{{ userEmail }}</div>
-                            <div class="text-xs text-blue-300">Gestor Logado</div>
+                            <div class="text-xs text-white/60">Gestor Logado</div>
                         </div>
-                        <div class="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-sm font-bold border-2 border-blue-400 cursor-pointer hover:bg-blue-500 transition-colors"
+                        <div class="h-10 w-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-sm font-bold avatar-glow cursor-pointer hover:bg-white/30 transition-all"
                             @click="logout" title="Sair">
                             {{ userInitials }}
                         </div>
                     </div>
                 </div>
             </header>
+            <!-- Rainbow Strip -->
+            <div class="rainbow-strip"></div>
 
             <main class="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
                 <div class="max-w-7xl mx-auto space-y-6">
@@ -361,21 +567,36 @@
                                                 <input type="checkbox" @change="toggleAll" :checked="allSelected"
                                                     class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4">
                                             </th>
-                                            <th scope="col"
-                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                ID</th>
-                                            <th scope="col"
-                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Nome / Cargo</th>
-                                            <th scope="col"
-                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Usuário Rede</th>
-                                            <th scope="col"
-                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Email</th>
-                                            <th scope="col"
-                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Centro de Custo</th>
+                                            <th scope="col" @click="sortResults('id')"
+                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+                                                ID
+                                                <span v-if="resultSortColumn === 'id'" class="ml-1">{{
+                                                    resultSortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                            </th>
+                                            <th scope="col" @click="sortResults('nome')"
+                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+                                                Nome / Cargo
+                                                <span v-if="resultSortColumn === 'nome'" class="ml-1">{{
+                                                    resultSortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                            </th>
+                                            <th scope="col" @click="sortResults('user_name')"
+                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+                                                Usuário Rede
+                                                <span v-if="resultSortColumn === 'user_name'" class="ml-1">{{
+                                                    resultSortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                            </th>
+                                            <th scope="col" @click="sortResults('email')"
+                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+                                                Email
+                                                <span v-if="resultSortColumn === 'email'" class="ml-1">{{
+                                                    resultSortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                            </th>
+                                            <th scope="col" @click="sortResults('centro_custo')"
+                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+                                                Centro de Custo
+                                                <span v-if="resultSortColumn === 'centro_custo'" class="ml-1">{{
+                                                    resultSortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
@@ -703,6 +924,10 @@
                 const sortColumn = ref('data');
                 const sortDirection = ref('desc');
 
+                // Estados para ordenação dos resultados de busca
+                const resultSortColumn = ref('nome');
+                const resultSortDirection = ref('asc');
+
                 const rememberMe = ref(false);
 
                 // --- AUTH METHODS ---
@@ -853,6 +1078,16 @@
                     }).searchUsersWeb(searchQuery.value, selectedFilial.value);
                 };
 
+                // Função para ordenar resultados de busca
+                const sortResults = (column) => {
+                    if (resultSortColumn.value === column) {
+                        resultSortDirection.value = resultSortDirection.value === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        resultSortColumn.value = column;
+                        resultSortDirection.value = 'asc';
+                    }
+                };
+
                 const confirmAndSend = () => {
                     isConfirmModalVisible.value = false;
                     const selected = searchResults.value.filter(u => u.selected);
@@ -959,7 +1194,24 @@
 
                 // Computed
                 const uniqueCostCenters = computed(() => [...new Set(searchResults.value.map(u => u.centro_custo))].sort());
-                const filteredResults = computed(() => !selectedCostCenter.value ? searchResults.value : searchResults.value.filter(u => u.centro_custo === selectedCostCenter.value));
+                const filteredResults = computed(() => {
+                    let results = !selectedCostCenter.value ? searchResults.value : searchResults.value.filter(u => u.centro_custo === selectedCostCenter.value);
+
+                    // Ordenação dos resultados
+                    return [...results].sort((a, b) => {
+                        let aVal = a[resultSortColumn.value];
+                        let bVal = b[resultSortColumn.value];
+
+                        // Tratamento para strings (case-insensitive)
+                        if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+                        if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+                        const direction = resultSortDirection.value === 'asc' ? 1 : -1;
+                        if (aVal > bVal) return direction;
+                        if (aVal < bVal) return -direction;
+                        return 0;
+                    });
+                });
                 const hasResults = computed(() => searchResults.value.length > 0);
                 const selectedCount = computed(() => filteredResults.value.filter(u => u.selected).length);
                 const allSelected = computed(() => filteredResults.value.length > 0 && filteredResults.value.every(u => u.selected));
@@ -1032,6 +1284,8 @@
                     queueData, queueLoading, performSearch, confirmAndSend, loadQueue,
                     selectedCostCenter, uniqueCostCenters, filteredResults, hasResults, selectedCount, allSelected,
                     toggleAll, openConfirmModal, resetForm, downloadReceipt, toTitleCase, formatDate,
+                    // Ordenação dos resultados de busca
+                    resultSortColumn, resultSortDirection, sortResults,
                     // Novos - Filtros e Paginação da Fila
                     queueFilters, currentPage, itemsPerPage, sortColumn, sortDirection,
                     uniqueQueueFilials, uniqueQueueAnalysts, filteredQueue, paginatedQueue, totalPages,

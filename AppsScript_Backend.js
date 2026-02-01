@@ -511,7 +511,7 @@ function searchUsersWeb(term, filial) {
         INNER JOIN \`maga-bigdata.mlpap.mag_v_funcionarios_ativos\` AS t2 
             ON t1.CUSTOM1 = CAST(t2.ID AS STRING)
         ${whereClause}
-        LIMIT 100
+        ORDER BY t2.NOME
     `;
 
     try {
@@ -595,9 +595,8 @@ function getQueueWeb() {
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) return [];
 
-    const startRow = Math.max(2, lastRow - 99);
-    const numRows = lastRow - startRow + 1;
-    const data = sheet.getRange(startRow, 1, numRows, 10).getValues();
+    // Retorna todos os registros (sem limite)
+    const data = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
 
     return data.reverse().map(r => ({
         id: r[0],

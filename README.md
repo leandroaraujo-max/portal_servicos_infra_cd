@@ -1,4 +1,4 @@
-# 🔐 AD Reset Tool v1.0.5
+# 🔐 AD Reset Tool v1.0.6
 
 ## Sobre o Projeto
 Ferramenta desenvolvida em PowerShell com interface gráfica (Windows Forms) para automatizar o processo de reset de senhas de usuários do Active Directory e criações de conta no Turia.
@@ -14,12 +14,13 @@ O sistema integra-se com uma planilha Google Sheets (via Apps Script API) para b
 - **Auditoria:** Registra todas as ações em planilha na nuvem e logs locais.
 - **Resiliência:** Sistema de retentativa automática (Retry) para falhas de rede.
 - **Web Interface (Frontend):**
-  - Sistema de autenticação com login/senha.
+  - Sistema de autenticação com login/senha e opção **"Esqueci Minha Senha"**.
+  - Navegação intuitiva: Clique no título para voltar à Home.
   - Solicitação de acesso e recuperação de senha.
-  - Busca por **Nome**, **ID Magalu**, **Usuário de Rede** ou **Email**.
-  - Busca flexível: Pode pesquisar **sem selecionar filial**.
+  - Busca avançada por **Nome**, **ID Magalu**, **Usuário de Rede** ou **Email** com **ordenação de colunas**.
+  - Busca flexível: Pode pesquisar **sem selecionar filial** (Placeholder: "Digite sua filial Magalog").
   - Funcionalidade **"Lembrar-me"** para salvar credenciais locais.
-  - Fila de acompanhamento com **ID sequencial** das solicitações.
+  - Fila de acompanhamento completa (sem limites) com **Filtro por Filial** e **ID sequencial**.
 
 ## Pré-Requisitos
 1. **Sistema Operacional:** Windows 10/11 ou Server (com PowerShell 5.1+).
@@ -75,7 +76,15 @@ clasp deploy -i <DEPLOYMENT_ID> -d "Descrição"
 
 ## Histórico de Versões
 
-### v1.0.5 (Atual)
+### v1.0.6 (Atual)
+- [Frontend] Novo link "Esqueci Minha Senha" na tela de login
+- [Frontend] Navegação "Voltar para Home" ao clicar no título
+- [Frontend] Placeholder de filial atualizado para "Digite sua filial Magalog"
+- [Frontend] Tabelas com ordenação de colunas (sortable columns)
+- [Frontend] Fila de Atendimento sem limite de linhas e com filtro por Filial
+- [UI] Refinamento estético geral (Look & Feel Magalu)
+
+### v1.0.5
 - [Backend] ID auto-incremental na aba **Auditoria**
 - [Backend] ID auto-incremental na aba **Solicitações**
 - [Frontend] Coluna **ID** visível na Fila de Acompanhamento
