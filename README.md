@@ -1,4 +1,4 @@
-# 🔐 AD Reset Tool v1.0.1
+# 🔐 AD Reset Tool v1.0.5
 
 ## Sobre o Projeto
 Ferramenta desenvolvida em PowerShell com interface gráfica (Windows Forms) para automatizar o processo de reset de senhas de usuários do Active Directory e criações de conta no Turia.
@@ -14,13 +14,16 @@ O sistema integra-se com uma planilha Google Sheets (via Apps Script API) para b
 - **Auditoria:** Registra todas as ações em planilha na nuvem e logs locais.
 - **Resiliência:** Sistema de retentativa automática (Retry) para falhas de rede.
 - **Web Interface (Frontend):**
-  - Solicitação de acesso e reset de senha pelo usuário.
+  - Sistema de autenticação com login/senha.
+  - Solicitação de acesso e recuperação de senha.
   - Busca por **Nome**, **ID Magalu**, **Usuário de Rede** ou **Email**.
+  - Busca flexível: Pode pesquisar **sem selecionar filial**.
   - Funcionalidade **"Lembrar-me"** para salvar credenciais locais.
+  - Fila de acompanhamento com **ID sequencial** das solicitações.
 
 ## Pré-Requisitos
 1. **Sistema Operacional:** Windows 10/11 ou Server (com PowerShell 5.1+).
-2. **Permissões:** Usuario deve ter permissão de reset de senha no AD.
+2. **Permissões:** Usuário deve ter permissão de reset de senha no AD.
 3. **Módulo Active Directory:** RSAT instalado (`Import-Module ActiveDirectory`).
 4. **Acesso à Rede:** 
    - Acesso à Internet (Google Apps Script).
@@ -35,20 +38,70 @@ O sistema integra-se com uma planilha Google Sheets (via Apps Script API) para b
 6. Clique em **EXECUTAR PROCESSO**.
 
 ## Estrutura de Arquivos
-- `Reset_users_Infra_cds.ps1`: Script principal (Core).
-- `Iniciar_Reset_users_Infra_cds.bat`: Launcher para execução fácil.
-- `AppsScript_Backend_v1.0.0.txt`: Código do backend (Google Apps Script).
-- `AppsScript_Web_Index_v1.0.0.html`: Interface Web (Frontend) v1.0.1.
-- `Logs/`: Diretório onde são salvos os logs de execução (`C:\ProgramData\ADResetTool\Logs`).
+| Arquivo | Descrição |
+|---------|-----------|
+| `Reset_users_Infra_cds.ps1` | Script principal (Core PowerShell) |
+| `Iniciar_Reset_users_Infra_cds.bat` | Launcher para execução fácil |
+| `AppsScript_Backend.js` | Backend Google Apps Script |
+| `AppsScript_Web_Index.html` | Interface Web (Frontend Vue.js) |
+| `Frontend.js` | Scripts complementares (Relatórios BigQuery) |
+| `.clasp.json` | Configuração do Clasp CLI |
+| `appsscript.json` | Manifesto do projeto Apps Script |
+
+## Deploy via Clasp
+O projeto utiliza [Clasp](https://github.com/google/clasp) para deploy automatizado:
+
+```bash
+# Instalar Clasp (requer Node.js)
+npm install -g @google/clasp
+
+# Login
+clasp login
+
+# Push (enviar código)
+clasp push
+
+# Deploy (atualizar produção)
+clasp deploy -i <DEPLOYMENT_ID> -d "Descrição"
+```
 
 ## Solução de Problemas
-- **Erro de Módulo AD:** Instale o RSAT (Remote Server Administration Tools).
-- **Tela travada:** O script usa `DoEvents` para manter a interface responsiva, mas operações pesadas de AD podem causar leve delay.
-- **Falha de API:** Verifique sua conexão com a internet. O sistema tentará 3 vezes antes de falhar.
+| Problema | Solução |
+|----------|---------|
+| Erro de Módulo AD | Instale o RSAT (Remote Server Administration Tools) |
+| Tela travada | Operações pesadas de AD podem causar leve delay |
+| Falha de API | Verifique conexão com internet (3 retentativas automáticas) |
+| ID não aparece na fila | Verifique se a coluna ID existe na aba "Solicitações" |
 
 ## Histórico de Versões
-- **v1.0.1 (Atual):**
-  - [Frontend] Adicionado busca por ID Magalu.
-  - [Frontend] Adicionado checkbox "Lembrar-me".
-  - [Backend] Atualizações de segurança e versão API.
-- **v1.0.0:** Release inicial.
+
+### v1.0.5 (Atual)
+- [Backend] ID auto-incremental na aba **Auditoria**
+- [Backend] ID auto-incremental na aba **Solicitações**
+- [Frontend] Coluna **ID** visível na Fila de Acompanhamento
+- [Frontend] Ordenação por ID habilitada
+- Funções utilitárias para numerar registros existentes
+
+### v1.0.4
+- [Backend] Adicionado campo ID na Auditoria
+- [Backend] Função `NUMERAR_AUDITORIA_EXISTENTE()`
+
+### v1.0.3
+- [Frontend] Corrigido alinhamento dos botões no modal de confirmação
+- [Frontend] Filial preenchida automaticamente ao buscar por ID
+- [Backend] Retorna filial do colaborador no resultado da busca
+
+### v1.0.2
+- [Frontend] Adicionada coluna **ID** na tabela de resultados de busca
+- [Backend] Query SQL atualizada para retornar `t2.ID`
+
+### v1.0.1
+- [Frontend] Adicionado busca por ID Magalu
+- [Frontend] Adicionado checkbox "Lembrar-me"
+- [Backend] Atualizações de segurança e versão API
+
+### v1.0.0
+- Release inicial
+
+---
+**Desenvolvido por:** Leandro Araújo - Suporte Infra CDs
