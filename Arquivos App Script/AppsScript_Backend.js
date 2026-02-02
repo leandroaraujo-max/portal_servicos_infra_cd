@@ -369,31 +369,13 @@ function getFiliaisList() {
     }
 }
 
-function searchUsersWeb(term, filial) {
-    if (!term) term = "";
-    if (!filial) filial = "";
-
-    const sanTerm = String(term).replace(/'/g, "").toUpperCase().trim();
-    const sanFilial = String(filial).replace(/'/g, "").trim();
-
-    if (!sanTerm && !sanFilial) throw new Error("Informe ao menos um critério de busca (Filial ou Termo).");
-
-    let whereClause = "WHERE t2.SITUACAO = 'Em Atividade Normal'";
-
-    // Filtro por Filial (Opcional)
-    if (sanFilial) {
-        whereClause += ` AND CAST(t2.FILIAL AS STRING) = '${sanFilial}'`;
-    }
-
-    // Filtro por Termo (Opcional, mas se existir, busca em ID, Nome, User)
-    if (sanTerm) {
-        whereClause += ` AND (
-            UPPER(t1.user_name) LIKE '%${sanTerm}%' 
-            OR UPPER(t2.NOME) LIKE '%${sanTerm}%'
-            OR CAST(t2.ID AS STRING) LIKE '%${sanTerm}%'
-            OR UPPER(t1.email) LIKE '%${sanTerm}%'
-        )`;
-    }
+/**
+ * BUSCA UNIVERAL / CORINGA BIGQUERY (v1.1.3)
+ * Sem limites de resultados conforme solicitado.
+ */
+function searchUserBQ(query) {
+    if (!query) throw new Error("Informe um termo para busca.");
+    const term = String(query).replace(/'/g, "").toUpperCase().trim();
 
     const sql = `
         SELECT 
@@ -407,7 +389,15 @@ function searchUsersWeb(term, filial) {
         FROM \`maga-bigdata.kirk.assignee\` AS t1
         INNER JOIN \`maga-bigdata.mlpap.mag_v_funcionarios_ativos\` AS t2 
             ON t1.CUSTOM1 = CAST(t2.ID AS STRING)
-        ${whereClause}
+        WHERE (
+            UPPER(t1.user_name) = '${term}' 
+            OR UPPER(t2.NOME) LIKE '%${term}%'
+            OR CAST(t2.ID AS STRING) = '${term}'
+            OR CAST(t2.FILIAL AS STRING) = '${term}'
+            OR UPPER(t1.email) = '${term}'
+            OR UPPER(t1.email) LIKE '%${term}%'
+        )
+        AND t2.SITUACAO = 'Em Atividade Normal'
         ORDER BY t2.NOME
     `;
 
@@ -415,19 +405,16 @@ function searchUsersWeb(term, filial) {
         const rows = executeQueryBQ(sql);
         let auditados = getUsuariosAuditados();
 
-        return rows.map(row => {
-            let uName = row[1];
-            return {
-                id: row[0],
-                user_name: uName,
-                nome: row[2],
-                cargo: row[3],
-                email: row[4],
-                centro_custo: row[5],
-                filial: row[6],
-                ja_resetado: auditados.has(String(uName).toUpperCase().trim())
-            };
-        });
+        return rows.map(row => ({
+            id: row[0],
+            user_name: row[1],
+            nome: row[2],
+            cargo: row[3],
+            email: row[4],
+            centro_custo: row[5],
+            filial: row[6],
+            ja_resetado: auditados.has(String(row[1]).toUpperCase().trim())
+        }));
     } catch (e) {
         throw new Error("Erro BQ: " + e.message);
     }
@@ -439,13 +426,14 @@ function submitResetQueue(requestData) {
 
     if (!queueSheet) {
         queueSheet = ss.insertSheet("Solicitações");
-        // Ajustado para 11 colunas: ... STATUS_PROCESSAMENTO, STATUS_APROVACAO
-        queueSheet.appendRow(["ID", "DATA_HORA", "FILIAL", "USER_NAME", "NOME", "EMAIL_COLAB", "CENTRO_CUSTO", "ANALISTA_RESPONSAVEL", "SOLICITANTE", "STATUS_PROCESSAMENTO", "STATUS_APROVACAO"]);
+        // Ajustado para 12 colunas: ID, DATA_HORA, FILIAL, USER_NAME, NOME, EMAIL_COLAB, CENTRO_CUSTO, ANALISTA_RESPONSAVEL, SOLICITANTE, TIPO_TAREFA, STATUS_PROCESSAMENTO, STATUS_APROVACAO
+        queueSheet.appendRow(["ID", "DATA_HORA", "FILIAL", "USER_NAME", "NOME", "EMAIL_COLAB", "CENTRO_CUSTO", "ANALISTA_RESPONSAVEL", "SOLICITANTE", "STATUS_PROCESSAMENTO", "STATUS_APROVACAO", "TIPO_TAREFA", "DETALHES_ADICIONAIS"]);
         queueSheet.setTabColor("Blue");
-        queueSheet.getRange(1, 1, 1, 11).setFontWeight("bold").setBackground("#cfe2f3");
+        queueSheet.getRange(1, 1, 1, 13).setFontWeight("bold").setBackground("#cfe2f3");
     }
 
     const timestamp = new Date();
+    const requesterEmail = Session.getActiveUser().getEmail();
 
     requestData.users.forEach(u => {
         const nextId = getNextQueueId(queueSheet);
@@ -458,13 +446,15 @@ function submitResetQueue(requestData) {
             u.email,
             u.centro_custo,
             requestData.analyst,
-            requestData.requester,
-            "PENDENTE",
-            "PENDENTE" // Status Aprovação
+            requesterEmail,
+            "PENDENTE",                      // STATUS_PROCESSAMENTO - Col 10 (J)
+            "PENDENTE",                      // STATUS_APROVACAO - Col 11 (K)
+            requestData.task_type || "RESET"  // TIPO_TAREFA - Col 12 (L)
         ]);
 
-        // Envia email de aprovação para o analista
-        sendApprovalEmail(requestData.analyst, nextId, "RESET", u.user_name, u.nome);
+        // Envia email de aprovação para o analista (usando o tipo real)
+        const emailType = requestData.task_type === "DESBLOQUEIO_CONTA" ? "DESBLOQUEIO" : "RESET";
+        sendApprovalEmail(requestData.analyst, nextId, emailType, u.user_name, u.nome);
     });
     return true;
 }
@@ -496,8 +486,8 @@ function getQueueWeb() {
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) return [];
 
-    // Retorna todos os registros (sem limite)
-    const data = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
+    // Retorna todos os registros (sem limite) - Ajustado para 12 colunas
+    const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues();
 
     return data.reverse().map(r => ({
         id: r[0],
@@ -506,7 +496,9 @@ function getQueueWeb() {
         user: r[3],
         nome: r[4],
         analista: r[7],
-        status: r[9]
+        status: r[9], // Col J
+        aprovacao: r[10], // Col K
+        tipo: r[11] // Col L
     }));
 }
 
@@ -557,8 +549,8 @@ function doPost(e) {
         let sheetAudit = ss.getSheetByName("Auditoria");
         if (!sheetAudit) {
             sheetAudit = ss.insertSheet("Auditoria");
-            sheetAudit.appendRow(["ID", "Data/Hora", "Filial/Origem", "Usuário AD", "Nova Senha", "Status", "Executor", "Email Colaborador", "Email Gestor", "Centro de Custo", "Observações"]);
-            sheetAudit.getRange(1, 1, 1, 11).setFontWeight("bold").setBackground("#D9D9D9");
+            sheetAudit.appendRow(["ID", "Data/Hora", "Filial/Origem", "Usuário AD", "Nova Senha", "Status", "Executor", "Email Colaborador", "Email Gestor", "Centro de Custo", "Observações", "Aprovador"]);
+            sheetAudit.getRange(1, 1, 1, 12).setFontWeight("bold").setBackground("#D9D9D9");
         }
 
         const nextId = getNextAuditId(sheetAudit);
@@ -573,7 +565,8 @@ function doPost(e) {
             data.email_colaborador || "",
             data.email_gestor || "",
             data.centro_custo || "",
-            data.email_status || "N/A"
+            data.email_status || "",
+            data.aprovador || ""
         ]);
 
         // Atualiza status na fila de Reset (Solicitações)
@@ -787,6 +780,7 @@ function submitMirrorExecution(data) {
 
     const nextId = getNextMirrorId(sheet);
     const timestamp = new Date();
+    const requesterEmail = Session.getActiveUser().getEmail();
 
     sheet.appendRow([
         nextId,
@@ -794,11 +788,11 @@ function submitMirrorExecution(data) {
         modelUser,
         JSON.stringify(targets),
         JSON.stringify(groups),
-        requester,
+        requesterEmail, // Session Email
         analyst,
         "PENDENTE_EXECUCAO",
         "",
-        "PENDENTE" // Status Aprovação
+        "PENDENTE"
     ]);
 
     // Enviar Notificação de Aprovação para o Analista
@@ -821,8 +815,8 @@ function handleApprovalAction(e) {
     if (!id || !type) return HtmlService.createHtmlOutput("<h3>Erro: Parâmetros inválidos.</h3>");
 
     const ss = SpreadsheetApp.openById(ID_PLANILHA_GESTAO);
-    let sheetName = (type === "RESET") ? "Solicitações" : "Espelho_Solicitacoes";
-    let statusCol = (type === "RESET") ? 11 : 10; // K (11) ou J (10)
+    let sheetName = (type === "RESET" || type === "DESBLOQUEIO" || type === "DESBLOQUEIO_CONTA") ? "Solicitações" : "Espelho_Solicitacoes";
+    let statusCol = (type === "RESET" || type === "DESBLOQUEIO" || type === "DESBLOQUEIO_CONTA") ? 11 : 10; // Coluna K (11) é STATUS_APROVACAO na planilha nova
 
     const sheet = ss.getSheetByName(sheetName);
     if (!sheet) return HtmlService.createHtmlOutput("<h3>Erro: Base de dados não encontrada.</h3>");
@@ -881,10 +875,28 @@ function sendApprovalEmail(analystName, requestId, type, info1, info2) {
     const linkApprove = `${scriptUrl}?action=approve&id=${requestId}&type=${type}`;
     const linkReject = `${scriptUrl}?action=reject&id=${requestId}&type=${type}`;
 
-    let subject = (type === "RESET") ? `🔐 Validação: Reset Senha #${requestId}` : `👥 Validação: Espelho #${requestId}`;
-    let detailHtml = (type === "RESET") ?
-        `<p><strong>Usuário:</strong> ${info1}</p><p><strong>Nome:</strong> ${info2}</p>` :
-        `<p><strong>Modelo:</strong> ${info1}</p><p><strong>Detalhe:</strong> ${info2}</p>`;
+    let subject = "";
+    let detailHtml = "";
+
+    if (type === "RESET") {
+        subject = `🔐 Validação: Reset Senha #${requestId}`;
+        detailHtml = `<p><strong>Tipo:</strong> RESET DE SENHA</p>
+                      <p><strong>ID Chamado:</strong> #${requestId}</p>
+                      <p><strong>Usuário:</strong> ${info1}</p>
+                      <p><strong>Nome:</strong> ${info2}</p>`;
+    } else if (type === "DESBLOQUEIO" || type === "DESBLOQUEIO_CONTA") {
+        subject = `🔓 Validação: Desbloqueio Conta #${requestId}`;
+        detailHtml = `<p><strong>Tipo:</strong> DESBLOQUEIO DE CONTA</p>
+                      <p><strong>ID Chamado:</strong> #${requestId}</p>
+                      <p><strong>Usuário:</strong> ${info1}</p>
+                      <p><strong>Nome:</strong> ${info2}</p>`;
+    } else {
+        subject = `👥 Validação: Espelhamento #${requestId}`;
+        detailHtml = `<p><strong>Tipo:</strong> ESPELHAMENTO (MIRROR)</p>
+                      <p><strong>ID Chamado:</strong> #${requestId}</p>
+                      <p><strong>Usuário Modelo:</strong> ${info1}</p>
+                      <p><strong>Detalhes:</strong> ${info2}</p>`;
+    }
 
     try {
         MailApp.sendEmail({
@@ -897,8 +909,6 @@ function sendApprovalEmail(analystName, requestId, type, info1, info2) {
                     <p>Uma nova solicitação requer sua <strong>APROVAÇÃO</strong> manual antes de ser executada.</p>
                     
                     <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                         <p><strong>Tipo:</strong> ${type}</p>
-                         <p><strong>ID Chamado:</strong> #${requestId}</p>
                          ${detailHtml}
                     </div>
 
@@ -1111,11 +1121,12 @@ function handleUnifiedQueue() {
             let row = rData[i];
             // Remove check row.length < 11 pois a ultima coluna pode estar vazia visualmente
 
-            let status = row[9] ? String(row[9]).toUpperCase().trim() : "";           // Col 10 (J)
-            let statusAprov = row[10] ? String(row[10]).toUpperCase().trim() : "";     // Col 11 (K)
+            let statusProc = row[9] ? String(row[9]).toUpperCase().trim() : "";           // Col 10 (J)
+            let statusAprov = row[10] ? String(row[10]).toUpperCase().trim() : "";        // Col 11 (K)
+            let taskType = row[11] || "RESET";                                            // Col 12 (L)
 
-            // STATUS=PENDENTE e APROVAÇÃO=APROVADO
-            if (status === "PENDENTE" && statusAprov === "APROVADO") {
+            // STATUS_PROCESSAMENTO=PENDENTE e STATUS_APROVACAO=APROVADO
+            if (statusProc === "PENDENTE" && statusAprov === "APROVADO") {
                 let filial = row[2];
                 let centroCusto = row[6];
                 let emailsLideres = [];
@@ -1123,7 +1134,7 @@ function handleUnifiedQueue() {
                 let emailGestor = (emailsLideres && emailsLideres.length > 0) ? emailsLideres[0] : "";
 
                 requests.push({
-                    task_type: "RESET",
+                    task_type: taskType, // TIPO_TAREFA - Col 12 (L)
                     id_solicitacao: row[0],
                     user_name: row[3],
                     nome: row[4],
@@ -1202,4 +1213,5 @@ function generatePassword() {
     }
     return password;
 }
+
 

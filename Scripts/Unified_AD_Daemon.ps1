@@ -123,14 +123,7 @@ function Invoke-ResetUser {
 
     try {
         # 1. Verificar usuário no AD
-        try {
-            $adUser = Get-ADUser -Identity $user -Properties mail, displayName, Enabled -ErrorAction Stop
-        }
-        catch {
-            Write-Log "Usuário $user não encontrado no AD." "WARN"
-            Send-Result -Id $id -Type "RESET" -Status "ERRO" -Msg "Usuario nao encontrado no AD" -Task $Task
-            return
-        }
+        $adUser = Get-ADUser -Identity $user -Properties mail, displayName, Enabled -ErrorAction Stop
 
         # 2. Resetar Senha
         $securePwd = ConvertTo-SecureString $newPassword -AsPlainText -Force
@@ -149,11 +142,28 @@ function Invoke-ResetUser {
         # 6. Reportar Sucesso
         Send-Result -Id $id -Type "RESET" -Status "CONCLUIDO" -Msg "Senha resetada e email enviado." -Task $Task
         Write-Log "RESET #$id concluído com sucesso." "SUCCESS"
-
     }
     catch {
         Write-Log "Falha no RESET #$id para ${user}: $_" "ERROR"
         Send-Result -Id $id -Type "RESET" -Status "ERRO" -Msg "Falha tecnica: $_" -Task $Task
+    }
+}
+
+function Invoke-UnlockUser {
+    param($Task)
+    $id = $Task.id_solicitacao
+    $user = $Task.user_name
+    
+    Write-Log "Iniciando DESBLOQUEIO para $user (Solicitação #$id)..." "INFO"
+
+    try {
+        Unlock-ADAccount -Identity $user -ErrorAction Stop
+        Send-Result -Id $id -Type "UNLOCK" -Status "CONCLUIDO" -Msg "Conta desbloqueada com sucesso." -Task $Task
+        Write-Log "DESBLOQUEIO #$id concluído." "SUCCESS"
+    }
+    catch {
+        Write-Log "Falha no DESBLOQUEIO #$id para ${user}: $_" "ERROR"
+        Send-Result -Id $id -Type "UNLOCK" -Status "ERRO" -Msg "Falha tecnica: $_" -Task $Task
     }
 }
 
@@ -239,6 +249,7 @@ function Send-Result {
             email_gestor      = $Task.email_gestor
             centro_custo      = $Task.centro_custo
             email_status      = "ENVIADO"
+            aprovador         = $Task.analista
         }
     }
     elseif ($Type -eq "MIRROR") {
@@ -248,6 +259,24 @@ function Send-Result {
             id_solicitacao = $Id
             status         = $Status
             message        = $Msg
+        }
+    }
+    elseif ($Type -eq "UNLOCK") {
+        $body = @{
+            id_solicitacao    = $Id
+            data_hora         = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+            filial            = $Task.aba
+            user_name         = $Task.user_name
+            nova_senha        = "CONTA_DESBLOQUEADA"
+            status            = $Status
+            executor          = "DAEMON_V4"
+            email_colaborador = $Task.email_colaborador
+            email_gestor      = $Task.email_gestor
+            centro_custo      = $Task.centro_custo
+            email_status      = "SOLICITACAO_PROCESSADA"
+            aprovador         = $Task.analista
+            type              = "UNLOCK"
+            message           = $Msg
         }
     }
     
@@ -296,20 +325,26 @@ while ($true) {
         # Logar o que veio (somente se não for array vazio para não poluir)
         if ($response -is [System.Array] -and $response.Count -gt 0) {
             $tasks = $response
-            Write-Log "Recebido(s) $($tasks.Count) tarefa(s). Payload: $($tasks | ConvertTo-Json -Depth 1 -Compress)" "INFO"
+            Write-Log "Processando $($tasks.Count) tarefa(s) da fila." "INFO"
             
             foreach ($task in $tasks) {
+                $id = $task.id_solicitacao
+                Write-Log "Iniciando Atendimento Solicitação #$id ($($task.task_type))..." "INFO"
                 switch ($task.task_type) {
                     "RESET" { Invoke-ResetUser -Task $task }
+                    "RESET_SENHA" { Invoke-ResetUser -Task $task }
+                    "DESBLOQUEIO_CONTA" { Invoke-UnlockUser -Task $task }
                     "FETCH_GROUPS" { Invoke-MirrorFetch -Task $task }
                     "MIRROR" { Invoke-MirrorExecute -Task $task }
+                    "ESPELHO_USUARIO" { Invoke-MirrorExecute -Task $task }
                     default { Write-Log "Tipo de tarefa desconhecido: $($task.task_type)" "WARN" }
                 }
             }
         }
         else {
             $hora = Get-Date -Format 'HH:mm:ss'
-            Write-Host "[$hora] [DEBUG] Fila vazia. Nenhuma tarefa pendente e aprovada..." -ForegroundColor DarkGray
+            # Só imprime se tiver passado algum tempo desde o último log ou modo debug
+            # Write-Host "[$hora] [DEBUG] Fila vazia." -ForegroundColor DarkGray
         }
     }
     catch {

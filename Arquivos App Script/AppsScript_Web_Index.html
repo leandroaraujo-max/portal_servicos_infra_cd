@@ -78,9 +78,21 @@
             }
         }
 
-        /* Gradient Header */
+        /* Master Style v1.1.3 - Azul Magalu + Borda Degradê */
         .header-gradient {
-            background: linear-gradient(135deg, var(--magalu-blue-darker) 0%, var(--magalu-blue-dark) 50%, var(--magalu-blue) 100%);
+            background-color: #0086FF !important;
+            position: relative;
+        }
+
+        .header-gradient::after {
+            content: "";
+            position: absolute;
+            bottom: 0px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #0086FF 0%, #E91E76 50%, #FFC107 100%);
+            z-index: 10;
         }
 
         /* Card Hover Effects */
@@ -197,15 +209,16 @@
 
                 <!-- Versão no canto inferior -->
                 <div class="text-center text-xs text-gray-400 pt-4 border-t border-gray-100">
-                    v1.1.0 • Leandro Araújo
+                    v1.1.3 • Leandro Araújo
                 </div>
             </div>
         </div>
 
         <div v-if="currentView === 'app'" class="flex flex-col h-full">
 
-            <header class="header-gradient text-white shadow-lg z-10">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <header class="header-gradient text-white shadow-lg z-10 py-2 sm:py-0">
+                <div
+                    class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[4rem] sm:h-20 flex flex-wrap sm:flex-nowrap items-center justify-between gap-y-4">
                     <div class="flex items-center space-x-8">
                         <div class="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
                             @click="switchTab('new')">
@@ -215,40 +228,31 @@
                             <span class="font-bold text-xl tracking-tight leading-none">
                                 Gerenciamento de Usuários
                                 <span
-                                    class="ml-2 text-xs bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full">v1.1.0</span>
+                                    class="ml-2 text-[10px] bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full inline-block align-middle">v1.1.6</span>
                                 <br>
                                 <span class="text-xs font-normal text-blue-200/80">Suporte Infra CDs</span>
                             </span>
                         </div>
-                        <div class="hidden md:flex space-x-1 bg-white/10 rounded-lg p-1">
+                        <div class="flex flex-wrap sm:flex-nowrap space-x-1 bg-white/10 rounded-lg p-1">
                             <button @click="switchTab('new')"
                                 :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'new', 'text-white/80 hover:text-white hover:bg-white/10': currentTab !== 'new'}"
                                 class="px-4 py-2 rounded-md text-sm font-medium transition-all">
-                                <span class="flex items-center">
-                                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 4v16m8-8H4"></path>
-                                    </svg>
-                                    Nova Solicitação
-                                </span>
-                            </button>
-                            <button @click="loadQueue"
-                                :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'queue', 'text-white/80 hover:text-white hover:bg-white/10': currentTab !== 'queue'}"
-                                class="px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center">
-                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
-                                </svg>
-                                Fila de Acompanhamento
+                                Resets
                             </button>
                             <button @click="switchTab('mirror')"
                                 :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'mirror', 'text-white/80 hover:text-white hover:bg-white/10': currentTab !== 'mirror'}"
-                                class="px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center">
-                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
-                                </svg>
-                                Espelho de Acesso
+                                class="px-4 py-2 rounded-md text-sm font-medium transition-all">
+                                Espelhos
+                            </button>
+                            <button @click="switchTab('unlock')"
+                                :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'unlock', 'text-white/80 hover:text-white hover:bg-white/10': currentTab !== 'unlock'}"
+                                class="px-4 py-2 rounded-md text-sm font-medium transition-all">
+                                Desbloqueios
+                            </button>
+                            <button @click="loadQueue"
+                                :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'queue', 'text-white/80 hover:text-white hover:bg-white/10': currentTab !== 'queue'}"
+                                class="px-4 py-2 rounded-md text-sm font-medium transition-all">
+                                Fila de Acompanhamento
                             </button>
                         </div>
                     </div>
@@ -265,8 +269,8 @@
                     </div>
                 </div>
             </header>
-            <!-- Rainbow Strip -->
-            <div class="rainbow-strip"></div>
+            <!-- Rainbow Strip (Removed for gold border style) -->
+
 
             <main class="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
                 <div class="max-w-7xl mx-auto space-y-6">
@@ -303,7 +307,7 @@
                                             class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Usuário
                                             Modelo</label>
                                         <input type="text" v-model="mirrorForm.modelUser"
-                                            @keyup.enter="fetchMirrorGroups" placeholder="Ex: lnd_araujo"
+                                            @keyup.enter="fetchMirrorGroups" placeholder="Ex: usuario_ad"
                                             class="block w-full px-3 py-2.5 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg border bg-white">
                                     </div>
                                     <button @click="fetchMirrorGroups"
@@ -364,7 +368,7 @@
                                     <div class="flex-1 relative">
                                         <input type="text" v-model="mirrorSearchQuery"
                                             @keyup.enter="performMirrorSearch"
-                                            placeholder="Nome, ID ou Usuário de Rede dos destinos..."
+                                            placeholder="Busca Coringa: Nome, ID, Usuário ou E-mail..."
                                             class="block w-full pl-3 pr-10 py-2.5 border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg border bg-white">
                                     </div>
                                     <button @click="performMirrorSearch" :disabled="mirrorSearchLoading"
@@ -373,31 +377,48 @@
                                     </button>
                                 </div>
 
-                                <!-- RESULTADOS BUSCA DESTINO -->
+                                <!-- RESULTADOS BUSCA DESTINO (v1.1.2 Coringa) -->
                                 <div v-if="mirrorSearchResults.length > 0"
-                                    class="mt-6 border rounded-lg overflow-hidden">
+                                    class="mt-6 border rounded-lg overflow-hidden bg-white shadow-sm">
                                     <table class="min-w-full divide-y divide-gray-200">
-                                        <thead class="bg-gray-50">
+                                        <thead class="bg-gray-100">
                                             <tr>
                                                 <th
-                                                    class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">
+                                                    class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase w-10">
                                                     Sel.</th>
                                                 <th
-                                                    class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">
-                                                    Colaborador</th>
+                                                    class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">
+                                                    ID</th>
                                                 <th
-                                                    class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">
-                                                    ID Rede</th>
+                                                    class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">
+                                                    Nome / Cargo</th>
+                                                <th
+                                                    class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">
+                                                    Usuário Rede</th>
+                                                <th
+                                                    class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">
+                                                    E-mail</th>
+                                                <th
+                                                    class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">
+                                                    Centro de Custo</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
                                             <tr v-for="u in mirrorSearchResults" :key="u.user_name"
-                                                class="hover:bg-blue-50">
-                                                <td class="px-4 py-2"><input type="checkbox" v-model="u.selected"
-                                                        class="rounded border-gray-300"></td>
-                                                <td class="px-4 py-2 text-xs font-medium">{{ u.nome }}</td>
-                                                <td class="px-4 py-2 text-xs font-mono text-blue-600">{{ u.user_name }}
+                                                class="hover:bg-blue-50 transition-colors">
+                                                <td class="px-4 py-3"><input type="checkbox" v-model="u.selected"
+                                                        class="rounded border-gray-300 text-blue-600 h-4 w-4"></td>
+                                                <td class="px-4 py-3 text-xs font-mono bg-gray-50">{{ u.id || '-' }}
                                                 </td>
+                                                <td class="px-4 py-3 text-xs">
+                                                    <div class="font-bold text-gray-900">{{ toTitleCase(u.nome) }} - {{
+                                                        toTitleCase(u.cargo) }}</div>
+                                                </td>
+                                                <td class="px-4 py-3 text-xs font-mono text-blue-700">{{ u.user_name }}
+                                                </td>
+                                                <td class="px-4 py-3 text-xs text-gray-600">{{ u.email ?
+                                                    u.email.toLowerCase() : '-' }}</td>
+                                                <td class="px-4 py-3 text-xs text-gray-500">{{ u.centro_custo }}</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -430,24 +451,15 @@
                         </div>
                     </div>
 
-                    <div v-if="currentTab === 'new'" class="space-y-6">
+                    <!-- DESBLOQUEIO DE USUÁRIO TAB -->
+                    <div v-if="currentTab === 'unlock' || currentTab === 'new'" class="space-y-6">
                         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div class="md:col-span-1">
+                            <div class="flex flex-col md:flex-row gap-4">
+                                <div class="flex-1">
                                     <label
-                                        class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Filial
-                                        / Base</label>
-                                    <div class="relative">
-                                        <input type="text" v-model="selectedFilial"
-                                            placeholder="Digite sua filial Magalog"
-                                            class="block w-full px-3 py-2.5 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg border bg-white"
-                                            @keyup.enter="performSearch">
-                                    </div>
-                                </div>
-                                <div class="md:col-span-3">
-                                    <label
-                                        class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Buscar
-                                        Colaborador</label>
+                                        class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                                        {{ searchLabel }}
+                                    </label>
                                     <div class="relative rounded-md shadow-sm">
                                         <div
                                             class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -458,12 +470,13 @@
                                             </svg>
                                         </div>
                                         <input type="text" v-model="searchQuery" @keyup.enter="performSearch"
-                                            placeholder="Nome, ID, Usuário de Rede ou Email..."
+                                            placeholder="Busca Coringa: Nome, ID, Usuário de Rede ou Email..."
                                             class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-lg p-2.5 border bg-white">
                                         <div class="absolute inset-y-0 right-0 pr-2 flex items-center">
                                             <button @click="performSearch" :disabled="loading"
-                                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors disabled:opacity-50">{{
-                                                loading ? 'Buscando...' : 'Buscar' }}</button>
+                                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors disabled:opacity-50">
+                                                {{ loading ? 'Buscando...' : 'Pesquisar Todos' }}
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -472,17 +485,16 @@
 
                         <div v-if="hasResults" class="flex flex-wrap items-center justify-between gap-4 pb-2">
                             <div class="flex items-center space-x-2">
-                                <div class="text-xs font-bold text-gray-500 uppercase">Filtrar por Centro de Custo:
-                                </div>
+                                <div class="text-xs font-bold text-gray-500 uppercase">Filtro Rápido (CC):</div>
                                 <select v-model="selectedCostCenter"
-                                    class="text-xs border-gray-300 rounded-md border p-1.5 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm min-w-[200px]">
-                                    <option value="">TODOS</option>
+                                    class="text-xs border-gray-300 rounded-md border p-1.5 focus:ring-blue-500 bg-white shadow-sm min-w-[200px]">
+                                    <option value="">TODOS OS CENTROS DE CUSTO</option>
                                     <option v-for="cc in uniqueCostCenters" :key="cc" :value="cc">{{ cc }}</option>
                                 </select>
                             </div>
-                            <div class="text-xs text-gray-400">Exibindo {{ filteredResults.length }} de {{
-                                searchResults.length }} encontrados</div>
+                            <div class="text-xs text-gray-400">Encontrados: {{ filteredResults.length }}</div>
                         </div>
+
 
                         <div
                             class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[400px] flex flex-col">
@@ -711,57 +723,35 @@
 
                         <!-- Paginação -->
                         <div v-if="!queueLoading && filteredQueue.length > 0"
-                            class="p-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4">
-                            <div class="flex items-center space-x-2">
-                                <span class="text-sm text-gray-600">Registros por página:</span>
-                                <select v-model="itemsPerPage" @change="currentPage = 1"
-                                    class="text-sm border-gray-300 rounded-md border p-1.5 focus:ring-blue-500 focus:border-blue-500 bg-white">
-                                    <option :value="10">10</option>
-                                    <option :value="25">25</option>
-                                    <option :value="50">50</option>
-                                    <option :value="100">100</option>
-                                </select>
-                                <span class="text-sm text-gray-500 ml-4">{{ filteredQueue.length }} registros</span>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1"
-                                    class="px-3 py-1.5 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                                    Anterior
-                                </button>
-                                <span class="text-sm text-gray-600">
-                                    Página {{ currentPage }} de {{ totalPages }}
-                                </span>
-                                <button @click="changePage(currentPage + 1)"
-                                    :disabled="currentPage === totalPages || totalPages === 0"
-                                    class="px-3 py-1.5 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                                    Próxima
-                                </button>
+                            class="p-4 bg-gray-50 border-t border-gray-200 flex justify-center items-center">
+                            <div class="text-xs font-bold text-blue-600 uppercase tracking-widest">
+                                Total Geral na Fila: {{ filteredQueue.length }} Colaboradores
                             </div>
                         </div>
                     </div>
                 </div>
             </main>
 
-            <footer v-if="currentTab === 'new'" class="bg-white border-t border-gray-200 p-4 shadow-lg-up z-20">
+            <footer v-if="currentTab === 'new' || currentTab === 'unlock'"
+                class="bg-white border-t border-gray-200 p-4 shadow-lg-up z-20">
                 <div class="max-w-7xl mx-auto flex items-center justify-between">
                     <div class="text-sm text-gray-500">
                         <span v-if="selectedCount > 0" class="font-bold text-blue-600">{{ selectedCount }}</span>
-                        colaborador(es) selecionado(s).
+                        selecionado(s).
                     </div>
                     <div class="flex items-center space-x-4">
                         <div class="hidden sm:block">
-                            <label class="text-xs font-semibold text-gray-500 mr-2 uppercase">Analista
-                                Responsável:</label>
+                            <label class="text-xs font-semibold text-gray-500 mr-2 uppercase">Analista:</label>
                             <select v-model="selectedAnalyst"
-                                class="text-sm border-gray-300 rounded-md border p-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50">
-                                <option value="" disabled>Selecione quem irá atender...</option>
+                                class="text-sm border-gray-300 rounded-md border p-2 focus:ring-blue-500 bg-gray-50">
+                                <option value="" disabled>Selecione...</option>
                                 <option v-for="a in analystList" :key="a" :value="a">{{ a }}</option>
                             </select>
                         </div>
                         <button @click="openConfirmModal"
                             :disabled="selectedCount === 0 || submitting || !selectedAnalyst"
-                            class="bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-2 px-6 rounded-lg shadow-md transition-all flex items-center">
-                            {{ submitting ? 'Enviando...' : 'SOLICITAR RESET' }}
+                            class="bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white font-bold py-2.5 px-8 rounded-lg shadow-md transition-all">
+                            {{ submitActionLabel }}
                         </button>
                     </div>
                 </div>
@@ -915,9 +905,8 @@
 
                 // --- APP METHODS ---
                 const performSearch = () => {
-                    // Validação: precisa de pelo menos um campo preenchido
-                    if (!selectedFilial.value && !searchQuery.value) {
-                        alert("Por favor, informe uma Filial ou um termo de busca.");
+                    if (!searchQuery.value) {
+                        alert("Por favor, informe um termo de busca.");
                         return;
                     }
                     loading.value = true;
@@ -928,7 +917,7 @@
                     }).withFailureHandler(e => {
                         alert(e.message);
                         loading.value = false;
-                    }).searchUsersWeb(searchQuery.value, selectedFilial.value);
+                    }).searchUserBQ(searchQuery.value);
                 };
 
                 // Função para ordenar resultados de busca
@@ -945,9 +934,13 @@
                     isConfirmModalVisible.value = false;
                     const selected = searchResults.value.filter(u => u.selected);
                     submitting.value = true;
-                    // Usa a filial do primeiro usuário selecionado se nenhuma filial foi selecionada no dropdown
-                    const filialToUse = selectedFilial.value || (selected.length > 0 ? selected[0].filial : '');
-                    const data = { users: selected, analyst: selectedAnalyst.value, requester: userEmail.value, filial: filialToUse };
+                    const taskType = currentTab.value === 'unlock' ? 'DESBLOQUEIO_CONTA' : 'RESET';
+                    const data = {
+                        users: selected,
+                        analyst: selectedAnalyst.value,
+                        requester: userEmail.value,
+                        task_type: taskType
+                    };
                     lastRequestData.value = data;
                     google.script.run.withSuccessHandler(() => {
                         submitting.value = false;
@@ -1035,7 +1028,10 @@
                     google.script.run.withSuccessHandler(res => {
                         mirrorSearchResults.value = res.map(u => ({ ...u, selected: false }));
                         mirrorSearchLoading.value = false;
-                    }).withFailureHandler(e => mirrorSearchLoading.value = false).searchUsersWeb(mirrorSearchQuery.value, "");
+                    }).withFailureHandler(e => {
+                        mirrorSearchLoading.value = false;
+                        alert(e.message);
+                    }).searchUserBQ(mirrorSearchQuery.value);
                 };
 
                 const selectAllGroups = (val) => {
@@ -1167,10 +1163,17 @@
                 };
 
                 const changePage = (page) => {
+                    // Sem limites! Mas mantemos a lógica de página se quiserem usar, 
+                    // porém por padrão exibimos todos.
                     if (page >= 1 && page <= totalPages.value) {
                         currentPage.value = page;
                     }
                 };
+
+                // Removemos o limite da fila para v1.1.3
+                onMounted(() => {
+                    itemsPerPage.value = 5000;
+                });
 
                 // Computed
                 const uniqueCostCenters = computed(() => [...new Set(searchResults.value.map(u => u.centro_custo))].sort());
@@ -1255,6 +1258,12 @@
 
                 const totalPages = computed(() => Math.ceil(filteredQueue.value.length / itemsPerPage.value) || 1);
 
+                const searchLabel = computed(() => currentTab.value === 'new' ? 'Busca para Reset de Senha' : 'Busca para Desbloqueio de Conta');
+                const submitActionLabel = computed(() => {
+                    if (submitting.value) return 'Enviando...';
+                    return currentTab.value === 'new' ? 'SOLICITAR RESET' : 'SOLICITAR DESBLOQUEIO';
+                });
+
                 return {
                     appLogo, // Expõe a logo para o template
                     currentView, authForm, isLoading, userEmail, userInitials, rememberMe,
@@ -1272,7 +1281,8 @@
                     sortQueue, changePage,
                     // Mirror
                     switchTab, mirrorForm, mirrorGroups, mirrorLoading, mirrorStatusMsg, fetchMirrorGroups, selectAllGroups, selectedGroupsCount, submitMirrorFinal,
-                    mirrorStep, mirrorSearchQuery, mirrorSearchResults, mirrorSearchLoading, performMirrorSearch, selectedTargetsCount
+                    mirrorStep, mirrorSearchQuery, mirrorSearchResults, mirrorSearchLoading, performMirrorSearch, selectedTargetsCount,
+                    searchLabel, submitActionLabel
                 };
             }
         }).mount('#app');

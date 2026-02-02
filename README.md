@@ -1,4 +1,4 @@
-# 🔐 Gerenciamento de Usuários - Suporte Infra CDs v1.1.0
+# 🔐 Gerenciamento de Usuários - Suporte Infra CDs v1.1.6
 
 ## Sobre o Projeto
 Ferramenta desenvolvida em PowerShell com interface gráfica (Windows Forms) para automatizar o processo de reset de senhas de usuários do Active Directory e criações de conta no Turia.
@@ -38,11 +38,11 @@ O sistema integra-se com uma planilha Google Sheets (via Apps Script API) para b
   - Busca flexível: Pode pesquisar **sem selecionar filial** (Placeholder: "Digite sua filial Magalog").
   - Funcionalidade **"Lembrar-me"** para salvar credenciais locais.
   - Fila de acompanhamento completa (sem limites) com **Filtro por Filial** e **ID sequencial**.
-- **Espelho de Acesso (Novo):** 
-  - Permite buscar grupos de um usuário "modelo" no AD.
-  - Seleção múltipla de grupos para espelhamento.
-  - Envio de solicitações de espelhamento para aprovação técnica.
-  - Polling resiliente com `SpreadsheetApp.flush()` para garantir persistência imediata.
+- **Auditória Avançada (SSO):** Registro automático do e-mail do solicitante via sessão corporativa Google.
+- **Desbloqueio de Conta (Novo):** Aba dedicada para desbloqueio de AD sem alteração de senha, com aprovação técnica por e-mail.
+- **Templates de E-mail Dinâmicos:** Notificações de aprovação exclusivas para Resets, Desbloqueios e Espelhamentos.
+- **Daemon v4.4:** Logs detalhados com ID da solicitação e processamento resiliente.
+- **UI Moderna:** Header responsivo (v1.1.6) com suporte a multiresolução e estética premium.
 
 ## Pré-Requisitos
 1. **Sistema Operacional:** Windows 10/11 ou Server (com PowerShell 5.1+).
@@ -98,21 +98,20 @@ clasp deploy -i <DEPLOYMENT_ID> -d "Descrição"
 
 ## Histórico de Versões
 
-### v1.3.x (Em Homologação - Evolução da v1.1.0)
-- [Feature] **Fila Única**: Backend unificado para aceitar diferentes tipos de solicitações na mesma planilha "Solicitações".
-- [Feature] **Desbloqueio de Conta**: Nova opção no Frontend ("Ação: Desbloquear Conta") que envia uma task do tipo `UNLOCK` para o Daemon.
-- [Daemon] Suporte nativo ao tipo `UNLOCK`/`DESBLOQUEIO_CONTA` sem necessidade de resetar senha.
-- [UI] Seletor de ação (Reset/Unlock) integrado ao rodapé sem alterar o layout original.
-- [Fix] Correção de sintaxe no template Vue.js (quebra de linha inválida).
-- [Fix] Criação de ambiente dedicado de Homologação separado da Produção.
+### v1.1.6 (Produção - Estável)
+- [Feature] **Desbloqueio de Conta**: Implementado como aba independente com fluxo completo de aprovação.
+- [Feature] **Auditoria SSO**: Captura automática do e-mail do analista solicitante via sessão Google (Garantia de Compliance).
+- [Feature] **Templates de E-mail**: Templates segmentados para Reset, Desbloqueio e Espelhamento.
+- [UI] **Header v1.1.6**: Ajuste de espaçamento e flex-wrap para evitar sobreposição de elementos.
+- [Daemon] **v4.4**: Inclusão de IDs nos logs e limpeza de mensagens redundantes.
+- [Backend] **Sincronização J-K-L**: Alinhamento rigoroso das colunas de Status, Aprovação e Tipo (Col J=Status Proc, K=Status Aprov, L=Tipo).
+- [Fix] Correção de sintaxe no template Vue.js (quebra de linha ternary expressions).
 
-### v1.1.0 (Versão Estável Atual - Rollback)
-- **STATUS:** Esta versão foi restaurada como a oficial de produção após testes na v1.2/1.3.
+### v1.1.0 (Versão Estável Anterior)
+- **STATUS:** Versão que serviu de base para a consolidação da v1.1.6.
 - [Mirror] **Espelho de Acesso**: Nova aba para clonar grupos de um usuário modelo.
-- [Daemon] Envio de grupos via string separada por `;` para compatibilidade total com Excel/Sheets.
-- [Backend] Adicionado `SpreadsheetApp.flush()` para evitar condições de corrida (Race Conditions).
-- [Fix] Mapeamento de campo `groups` / `grupos` unificado para evitar bugs de retorno do Daemon.
-- [UI] Indicador de versão atualizado para v1.1.0 com resiliência no polling do frontend.
+- [Daemon] Envio de grupos via string separada por `;`.
+- [UI] Indicador de versão com resiliência no polling.
 - [Deploy] Sincronização automática da URL de produção via CLI `clasp`.
 
 ### v1.0.8 / v1.0.9
