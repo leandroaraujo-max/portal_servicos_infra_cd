@@ -4,6 +4,10 @@
 Ferramenta desenvolvida em PowerShell com interface gráfica (Windows Forms) para automatizar o processo de reset de senhas de usuários do Active Directory e criações de conta no Turia.
 
 O sistema integra-se com uma planilha Google Sheets (via Apps Script API) para buscar demandas de resets pendentes e auditar as ações executadas.
+ 
+ ## URL de Acesso (Produção)
+ **Link Fixo:** [Acessar Ferramenta Web](https://script.google.com/macros/s/AKfycbwcwKziwn37TfZgEJcHA_37l9aG6prf73CL-8JZ9pMgO9igU6mEC9iTrdNI1FbtI4Kr/exec)
+ *Use este link para acessar a interface web e para atualizações futuras.*
 
 ## Funcionalidades Principais
 - **Listagem de Pendências:** Busca solicitações de reset via API.
