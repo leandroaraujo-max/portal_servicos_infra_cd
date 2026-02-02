@@ -33,13 +33,18 @@ try {
     Write-Host "Iniciando sicronização de Espelho AD..." -ForegroundColor White
     Write-Log "Iniciando ciclo de verificação..."
 
+    # Reconstrói a URL de forma segura
+    $BaseUrl = "https://script.google.com/macros/s/AKfycbwcwKziwn37TfZgEJcHA_37l9aG6prf73CL-8JZ9pMgO9igU6mEC9iTrdNI1FbtI4Kr/exec"
+    $FullUri = "$($BaseUrl)?mode=check_mirror_queue"
+    
+    Write-Host "URL alvo: $FullUri" -ForegroundColor DarkGray
     Write-Host "Conectando API..." -NoNewline -ForegroundColor Gray
     
-    # Força TLS 1.2 (Essencial para conexões modernas Google/AWS)
+    # Força TLS 1.2
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     
     try {
-        $response = Invoke-RestMethod -Uri "$API_URL?mode=check_mirror_queue" -Method Get -TimeoutSec 30 -ErrorAction Stop
+        $response = Invoke-RestMethod -Uri $FullUri -Method Get -TimeoutSec 30 -ErrorAction Stop
         Write-Host " [OK]" -ForegroundColor Green
     } catch {
         Write-Host " [FALHA]" -ForegroundColor Red
