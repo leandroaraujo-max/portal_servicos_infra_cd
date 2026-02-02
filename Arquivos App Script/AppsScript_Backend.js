@@ -71,193 +71,74 @@ function fetchUserByID(id) {
     };
 }
 
+// 2. LOGIN COM GOOGLE (NOVO)
+function loginWithGoogle() {
+    const email = Session.getActiveUser().getEmail();
+
+    if (!email) {
+        throw new Error("Não foi possível identificar sua conta Google. Certifique-se de dar permissão ao script.");
+    }
+
+    // 1. Validação de Domínio
+    const allowedDomains = [
+        "magazineluiza.com.br",
+        "sode.com.br",
+        "netshoes.com",
+        "netshoes.com.br",
+        "gfllogistica.com.br",
+        "luizalabs.com"
+    ];
+
+    const domain = email.split("@")[1];
+    if (!allowedDomains.includes(domain)) {
+        throw new Error("Domínio não autorizado: " + domain);
+    }
+
+    // 2. Validação de Acesso (AUTH Sheet ou BigQuery)
+    const sheet = getAuthSheet();
+    const data = sheet.getDataRange().getValues();
+
+    let userFound = false;
+    let userName = "";
+
+    for (let i = 1; i < data.length; i++) {
+        // Coluna C = Email
+        if (String(data[i][2]).toLowerCase() === String(email).toLowerCase()) {
+            if (String(data[i][5]) !== "ATIVO") {
+                throw new Error("Usuário cadastrado mas não está ATIVO (Status: " + data[i][5] + ").");
+            }
+            userFound = true;
+            userName = data[i][1]; // Coluna B = Nome
+            break;
+        }
+    }
+
+    if (!userFound) {
+        // Opcional: Auto-cadastro limitado ou erro
+        throw new Error("Usuário não cadastrado no sistema. Solicite acesso ao administrador.");
+    }
+
+    return {
+        success: true,
+        token: email,
+        name: userName,
+        email: email
+    };
+}
+
+/* FUNÇÕES DE LOGIN MANUAL DESATIVADAS
 // 1. SOLICITA ACESSO
-function requestAccess(id, nome, email) {
-    const sheet = getAuthSheet();
-    const data = sheet.getDataRange().getValues();
+function requestAccess(id, nome, email) { ... }
 
-    for (let i = 1; i < data.length; i++) {
-        if (String(data[i][0]) === String(id) || String(data[i][2]).toLowerCase() === String(email).toLowerCase()) {
-            throw new Error("Usuário já cadastrado (ID/Email duplicado). Status: " + data[i][5]);
-        }
-    }
-
-    const timestamp = new Date();
-    sheet.appendRow([id, nome, email.toLowerCase(), "", "", "PENDENTE", "TRUE", timestamp]);
-
-    // const scriptUrl = ScriptApp.getService().getUrl();
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbwcwKziwn37TfZgEJcHA_37l9aG6prf73CL-8JZ9pMgO9igU6mEC9iTrdNI1FbtI4Kr/exec";
-    const approveLink = `${scriptUrl}?action=approve&email=${encodeURIComponent(email)}`;
-
-    try {
-        MailApp.sendEmail({
-            to: EMAIL_ADMIN,
-            subject: "🔐 Solicitação de Acesso: Gerenciamento de Usuários - Suporte Infra CDs",
-            htmlBody: `
-                <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-                    <h2 style="color: #1e40af;">Nova Solicitação de Acesso</h2>
-                    <p><strong>ID:</strong> ${id}</p>
-                    <p><strong>Nome:</strong> ${nome}</p>
-                    <p><strong>Email:</strong> ${email}</p>
-                    <a href="${approveLink}" style="background-color: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-top: 10px;">
-                        APROVAR ACESSO
-                    </a>
-                </div>
-            `
-        });
-    } catch (e) { }
-
-    return { success: true, message: "Solicitação enviada! Aguarde a aprovação do administrador." };
-}
-
-// 2. LOGIN (A função que estava faltando!)
-function login(email, password) {
-    const sheet = getAuthSheet();
-    const data = sheet.getDataRange().getValues();
-
-    for (let i = 1; i < data.length; i++) {
-        const row = data[i];
-        if (String(row[2]).toLowerCase() === String(email).toLowerCase()) {
-            if (String(row[5]) !== "ATIVO") {
-                throw new Error("Usuário não está ATIVO (Status: " + row[5] + ").");
-            }
-            const storedHash = row[3];
-            const salt = row[4];
-            const inputHash = computeHash(password, salt);
-
-            if (inputHash === storedHash) {
-                return {
-                    success: true,
-                    token: email,
-                    firstAccess: String(row[6]).toUpperCase() === "TRUE",
-                    name: row[1]
-                };
-            } else {
-                throw new Error("Senha incorreta.");
-            }
-        }
-    }
-    throw new Error("Usuário não encontrado.");
-}
+// 2. LOGIN
+function login(email, password) { ... }
 
 // 3. TROCA DE SENHA
-function changePassword(email, newPass, isFirstAccessFlow) {
-    const sheet = getAuthSheet();
-    const data = sheet.getDataRange().getValues();
+function changePassword(email, newPass, isFirstAccessFlow) { ... }
 
-    for (let i = 1; i < data.length; i++) {
-        if (String(data[i][2]).toLowerCase() === String(email).toLowerCase()) {
-            const salt = Utilities.getUuid();
-            const newHash = computeHash(newPass, salt);
-
-            sheet.getRange(i + 1, 4).setValue(newHash);
-            sheet.getRange(i + 1, 5).setValue(salt);
-
-            if (isFirstAccessFlow || String(data[i][6]).toUpperCase() === "TRUE") {
-                sheet.getRange(i + 1, 7).setValue("FALSE");
-            }
-
-            return { success: true, message: "Senha alterada com sucesso!" };
-        }
-    }
-    throw new Error("Usuário não encontrado para troca de senha.");
-}
-
-// 4. ADMIN: APROVAR E GERAR SENHA
-function approveUser(email) {
-    const sheet = getAuthSheet();
-    const data = sheet.getDataRange().getValues();
-
-    for (let i = 1; i < data.length; i++) {
-        if (String(data[i][2]).toLowerCase() === String(email).toLowerCase()) {
-            const tempPass = Math.random().toString(36).slice(-8);
-            const salt = Utilities.getUuid();
-            const hash = computeHash(tempPass, salt);
-
-            sheet.getRange(i + 1, 4).setValue(hash);
-            sheet.getRange(i + 1, 5).setValue(salt);
-            sheet.getRange(i + 1, 6).setValue("ATIVO");
-            sheet.getRange(i + 1, 7).setValue("TRUE");
-
-            MailApp.sendEmail({
-                to: email,
-                subject: "✅ Acesso Aprovado: AD Reset Tool",
-                htmlBody: `
-                    <h2>Seu acesso foi aprovado!</h2>
-                    <p>Utilize a senha temporária abaixo para o primeiro acesso:</p>
-                    <h3 style="background:#eee; padding:10px;">${tempPass}</h3>
-                    <p>Você será solicitado a trocar esta senha ao entrar.</p>
-                `
-            });
-            return "Usuário " + email + " aprovado. Senha enviada.";
-        }
-    }
-    return "Usuário não encontrado.";
-}
-
-function computeHash(message, salt) {
-    const signature = Utilities.computeDigest(
-        Utilities.DigestAlgorithm.SHA_256,
-        message + salt,
-        Utilities.Charset.UTF_8
-    );
-    return signature.map(function (byte) {
-        var v = (byte < 0) ? 256 + byte : byte;
-        return ("0" + v.toString(16)).slice(-2);
-    }).join("");
-}
-
-// 5. RECUPERAÇÃO DE SENHA (Esqueci Senha)
-function requestPasswordReset(email) {
-    if (!email) throw new Error("Email é obrigatório.");
-
-    const sheet = getAuthSheet();
-    const data = sheet.getDataRange().getValues();
-
-    for (let i = 1; i < data.length; i++) {
-        if (String(data[i][2]).toLowerCase() === String(email).toLowerCase()) {
-            // Verificar se usuário está ativo
-            if (String(data[i][5]) !== "ATIVO") {
-                throw new Error("Usuário não está ativo. Entre em contato com o administrador.");
-            }
-
-            // Gerar senha temporária
-            const tempPass = Math.random().toString(36).slice(-8);
-            const salt = Utilities.getUuid();
-            const hash = computeHash(tempPass, salt);
-
-            // Atualizar senha e marcar como primeiro acesso
-            sheet.getRange(i + 1, 4).setValue(hash);
-            sheet.getRange(i + 1, 5).setValue(salt);
-            sheet.getRange(i + 1, 7).setValue("TRUE"); // Força troca de senha no próximo login
-
-            // Enviar email com senha temporária
-            try {
-                MailApp.sendEmail({
-                    to: email,
-                    subject: "🔐 Recuperação de Senha - AD Reset Tool",
-                    htmlBody: `
-                        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 8px; max-width: 500px;">
-                            <h2 style="color: #1e40af;">Recuperação de Senha</h2>
-                            <p>Recebemos uma solicitação de recuperação de senha para sua conta.</p>
-                            <p>Utilize a senha temporária abaixo para acessar o sistema:</p>
-                            <h3 style="background: #f3f4f6; padding: 15px; border-radius: 5px; text-align: center; font-family: monospace; letter-spacing: 2px;">${tempPass}</h3>
-                            <p style="color: #dc2626;"><strong>Importante:</strong> Você será solicitado a criar uma nova senha ao entrar.</p>
-                            <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
-                            <p style="color: #666; font-size: 12px;">Se você não solicitou esta recuperação, ignore este email ou entre em contato com o administrador.</p>
-                        </div>
-                    `
-                });
-            } catch (emailErr) {
-                throw new Error("Erro ao enviar email: " + emailErr.message);
-            }
-
-            return { success: true, message: "Email de recuperação enviado com sucesso!" };
-        }
-    }
-
-    throw new Error("Email não encontrado no sistema.");
-}
+// 5. RECUPERAÇÃO DE SENHA
+function requestPasswordReset(email) { ... }
+*/
 
 // =========================================================================
 // API ENDPOINT (GET)

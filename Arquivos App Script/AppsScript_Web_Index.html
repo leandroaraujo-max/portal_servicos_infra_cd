@@ -162,242 +162,42 @@
                     </div>
                     <h2 class="mt-2 text-3xl font-bold tracking-tight text-gray-900">Gerenciamento de Usuários</h2>
                     <p class="text-sm font-medium text-blue-600">Suporte Infra CDs</p>
-                    <p class="mt-2 text-sm text-gray-500">
-                        Faça login para acessar a ferramenta
+                    <p class="mt-4 text-sm text-gray-500">
+                        Acesso exclusivo com conta Google corporativa
                     </p>
                 </div>
-                <form class="mt-8 space-y-6" @submit.prevent="handleLogin">
-                    <div class="-space-y-px rounded-md shadow-sm">
-                        <div>
-                            <label for="email-address" class="sr-only">Email</label>
-                            <input id="email-address" name="email" type="email" autocomplete="email" required
-                                v-model="authForm.email"
-                                class="relative block w-full appearance-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                                placeholder="Email corporativo">
-                        </div>
-                        <div>
-                            <label for="password" class="sr-only">Senha</label>
-                            <input id="password" name="password" type="password" autocomplete="current-password"
-                                required v-model="authForm.password"
-                                class="relative block w-full appearance-none rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                                placeholder="Senha">
-                        </div>
-                    </div>
 
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <input id="remember-me" name="remember-me" type="checkbox" v-model="rememberMe"
-                                class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                            <label for="remember-me" class="ml-2 block text-sm text-gray-900">Lembrar-me</label>
-                        </div>
-                        <div class="text-sm">
-                            <a href="#" @click.prevent="currentView = 'forgot_password'"
-                                class="font-medium text-blue-600 hover:text-blue-500">Esqueci minha senha</a>
-                        </div>
-                    </div>
+                <div class="mt-8">
+                    <button @click="handleLogin" :disabled="isLoading"
+                        class="group relative flex w-full justify-center items-center gap-3 rounded-lg border border-gray-300 bg-white py-3 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 transition-all shadow-sm">
 
-                    <div>
-                        <button type="submit" :disabled="isLoading"
-                            class="btn-magalu group relative flex w-full justify-center rounded-lg border border-transparent py-3 px-4 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50">
-                            {{ isLoading ? 'Entrando...' : 'Entrar' }}
-                        </button>
-                    </div>
-                </form>
-                <div class="text-center space-y-2">
-                    <p class="text-sm text-gray-600">
-                        Não tem acesso?
-                        <a href="#" @click.prevent="currentView = 'register'"
-                            class="font-medium text-blue-600 hover:text-blue-500">Solicitar Acesso</a>
+                        <svg class="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
+                            <path
+                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                fill="#4285F4" />
+                            <path
+                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                fill="#34A853" />
+                            <path
+                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                                fill="#FBBC05" />
+                            <path
+                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                fill="#EA4335" />
+                        </svg>
+
+                        {{ isLoading ? 'Autenticando...' : 'Entrar com Google' }}
+                    </button>
+
+                    <p v-if="authForm.errorMessage"
+                        class="mt-4 text-center text-sm text-red-600 bg-red-50 p-2 rounded border border-red-100">
+                        {{ authForm.errorMessage }}
                     </p>
                 </div>
+
                 <!-- Versão no canto inferior -->
                 <div class="text-center text-xs text-gray-400 pt-4 border-t border-gray-100">
-                    v1.0.5 • Leandro Araújo
-                </div>
-            </div>
-        </div>
-
-        <div v-if="currentView === 'register'"
-            class="flex min-h-full items-center justify-center py-12 px-4 sm:px-6 lg:px-8 h-full"
-            style="background: linear-gradient(135deg, #004499 0%, #0066CC 50%, #0086FF 100%);">
-
-            <!-- Rainbow Strip no topo -->
-            <div class="rainbow-strip fixed top-0 left-0 right-0"></div>
-
-            <div
-                class="w-full max-w-md space-y-8 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20">
-                <div class="text-center flex flex-col items-center">
-                    <div class="p-2 mb-2">
-                        <img :src="appLogo" alt="LuizaLabs" class="h-16 w-auto mx-auto drop-shadow-md">
-                    </div>
-                    <h2 class="mt-2 text-3xl font-bold tracking-tight text-gray-900">Solicitar Acesso</h2>
-                    <p class="mt-2 text-sm text-gray-500">Informe seu ID Magalu para localizar seu cadastro.</p>
-                </div>
-                <form class="mt-8 space-y-6" @submit.prevent="handleRegister">
-                    <div class="shadow-sm space-y-4">
-                        <div>
-                            <label for="reg-id" class="sr-only">ID Magalu</label>
-                            <div class="flex">
-                                <input id="reg-id" name="id" type="text" required v-model="authForm.id"
-                                    class="relative block w-full rounded-l-lg border border-gray-300 px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                                    placeholder="ID Magalu (Números)" @blur="fetchUserData" :disabled="isLoading">
-                                <button type="button" @click="fetchUserData" :disabled="isLoading"
-                                    class="relative -ml-px inline-flex items-center space-x-2 rounded-r-lg border border-gray-300 bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                    </svg>
-                                    <span>Buscar</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div v-if="authForm.name"
-                            class="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200 animate-fade-in">
-                            <div class="flex items-center">
-                                <div class="bg-green-100 p-2 rounded-full mr-3">
-                                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-green-600 uppercase font-bold">Colaborador Encontrado</p>
-                                    <p class="text-sm font-semibold text-gray-900">{{ authForm.name }}</p>
-                                    <p class="text-xs text-gray-600">{{ authForm.email }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div v-if="authForm.errorMessage"
-                            class="bg-red-50 text-red-600 text-sm text-center p-3 rounded-lg border border-red-200">
-                            {{ authForm.errorMessage }}
-                        </div>
-                    </div>
-
-                    <div>
-                        <button type="submit" :disabled="isLoading || !authForm.name"
-                            class="group relative flex w-full justify-center rounded-lg border border-transparent py-3 px-4 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                            style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
-                            {{ isLoading ? 'Enviando...' : 'Solicitar Acesso' }}
-                        </button>
-                    </div>
-                </form>
-                <div class="text-center pt-4 border-t border-gray-100">
-                    <a href="#" @click.prevent="currentView = 'login'"
-                        class="font-medium text-blue-600 hover:text-blue-500 flex items-center justify-center">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                        Voltar para Login
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="currentView === 'change_password'"
-            class="flex min-h-full items-center justify-center py-12 px-4 sm:px-6 lg:px-8 h-full"
-            style="background: linear-gradient(135deg, #004499 0%, #0066CC 50%, #0086FF 100%);">
-
-            <!-- Rainbow Strip no topo -->
-            <div class="rainbow-strip fixed top-0 left-0 right-0"></div>
-
-            <div
-                class="w-full max-w-md space-y-8 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20">
-                <div class="text-center flex flex-col items-center">
-                    <div class="p-2 mb-2">
-                        <img :src="appLogo" alt="LuizaLabs" class="h-16 w-auto mx-auto drop-shadow-md">
-                    </div>
-                    <h2 class="mt-2 text-3xl font-bold tracking-tight text-gray-900">Primeiro Acesso</h2>
-                    <p class="mt-2 text-sm text-gray-500">Por segurança, defina sua nova senha.</p>
-                </div>
-                <form class="mt-8 space-y-6" @submit.prevent="handleChangePassword">
-                    <div class="-space-y-px rounded-md shadow-sm">
-                        <div>
-                            <label for="new-password" class="sr-only">Nova Senha</label>
-                            <input id="new-password" name="new-password" type="password" required
-                                v-model="authForm.newPassword"
-                                class="relative block w-full appearance-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                                placeholder="Nova Senha">
-                        </div>
-                        <div>
-                            <label for="confirm-password" class="sr-only">Confirmar Senha</label>
-                            <input id="confirm-password" name="confirm-password" type="password" required
-                                v-model="authForm.confirmPassword"
-                                class="relative block w-full appearance-none rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                                placeholder="Confirmar Nova Senha">
-                        </div>
-                    </div>
-                    <p v-if="authForm.errorMessage" class="text-red-500 text-sm text-center">{{ authForm.errorMessage }}
-                    </p>
-
-                    <div>
-                        <button type="submit" :disabled="isLoading"
-                            class="btn-magalu group relative flex w-full justify-center rounded-lg border border-transparent py-3 px-4 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50">
-                            {{ isLoading ? 'Salvando...' : 'Definir Senha' }}
-                        </button>
-                    </div>
-                </form>
-                <div class="text-center pt-4 border-t border-gray-100">
-                    <a href="#" @click.prevent="currentView = 'app'"
-                        class="font-medium text-blue-600 hover:text-blue-500 flex items-center justify-center">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                        Voltar para a Aplicação
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- View Esqueci Senha -->
-        <div v-if="currentView === 'forgot_password'"
-            class="flex min-h-full items-center justify-center py-12 px-4 sm:px-6 lg:px-8 h-full"
-            style="background: linear-gradient(135deg, #004499 0%, #0066CC 50%, #0086FF 100%);">
-
-            <!-- Rainbow Strip no topo -->
-            <div class="rainbow-strip fixed top-0 left-0 right-0"></div>
-
-            <div
-                class="w-full max-w-md space-y-8 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20">
-                <div class="text-center flex flex-col items-center">
-                    <div class="p-2 mb-2">
-                        <img :src="appLogo" alt="LuizaLabs" class="h-16 w-auto mx-auto drop-shadow-md">
-                    </div>
-                    <h2 class="mt-2 text-3xl font-bold tracking-tight text-gray-900">Recuperar Senha</h2>
-                    <p class="mt-2 text-sm text-gray-500">
-                        Informe seu email corporativo para receber as instruções de recuperação.
-                    </p>
-                </div>
-                <form class="mt-8 space-y-6" @submit.prevent="handleForgotPassword">
-                    <div class="rounded-lg shadow-sm">
-                        <div>
-                            <label for="forgot-email" class="sr-only">Email</label>
-                            <input id="forgot-email" name="email" type="email" autocomplete="email" required
-                                v-model="authForm.email"
-                                class="relative block w-full appearance-none rounded-lg border border-gray-300 px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                                placeholder="Email corporativo">
-                        </div>
-                    </div>
-                    <div>
-                        <button type="submit" :disabled="isLoading"
-                            class="group relative flex w-full justify-center rounded-lg border border-transparent py-3 px-4 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 transition-all"
-                            style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);">
-                            {{ isLoading ? 'Enviando...' : 'Enviar Instruções' }}
-                        </button>
-                    </div>
-                </form>
-                <div class="text-center pt-4 border-t border-gray-100">
-                    <a href="#" @click.prevent="currentView = 'login'"
-                        class="font-medium text-blue-600 hover:text-blue-500 flex items-center justify-center">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                        Voltar para Login
-                    </a>
+                    v1.0.6 • Leandro Araújo
                 </div>
             </div>
         </div>
@@ -1044,7 +844,7 @@
                 // Auth State
                 const currentView = ref('login');
                 const isLoading = ref(false);
-                const authForm = ref({ id: '', email: '', password: '', name: '', newPassword: '', confirmPassword: '', errorMessage: '' });
+                const authForm = ref({ errorMessage: '' });
                 const userEmail = ref('');
                 const userInitials = ref('');
 
@@ -1088,120 +888,27 @@
                 // --- AUTH METHODS ---
                 const handleLogin = () => {
                     isLoading.value = true;
+                    authForm.value.errorMessage = '';
+
                     google.script.run.withSuccessHandler(res => {
                         isLoading.value = false;
                         if (res.success) {
-                            // Salva ou Limpa credenciais
-                            if (rememberMe.value) {
-                                localStorage.setItem('savedEmail', authForm.value.email);
-                                localStorage.setItem('savedPassword', authForm.value.password); // Nota: Em produção real, evitar salvar senhas em plain text
-                                localStorage.setItem('rememberMe', 'true');
-                            } else {
-                                localStorage.removeItem('savedEmail');
-                                localStorage.removeItem('savedPassword');
-                                localStorage.removeItem('rememberMe');
-                            }
-
                             userEmail.value = res.token;
-                            userInitials.value = res.name.substring(0, 2).toUpperCase();
-                            if (res.firstAccess) {
-                                currentView.value = 'change_password';
-                            } else {
-                                initApp();
-                            }
+                            userInitials.value = res.name ? res.name.substring(0, 2).toUpperCase() : 'EU';
+                            initApp();
                         }
                     }).withFailureHandler(err => {
                         isLoading.value = false;
-                        alert(err.message);
-                    }).login(authForm.value.email, authForm.value.password);
+                        authForm.value.errorMessage = err.message;
+                    }).loginWithGoogle();
                 };
 
-                // Auto-load credentials
+                // Auto-login if session persists (Optional optimization)
                 onMounted(() => {
-                    if (localStorage.getItem('rememberMe') === 'true') {
-                        authForm.value.email = localStorage.getItem('savedEmail') || '';
-                        authForm.value.password = localStorage.getItem('savedPassword') || '';
-                        rememberMe.value = true;
-                    }
+                    // We could trigger handleLogin() automatically if we wanted SSO-like experience
+                    // handleLogin();
+                    // But user explicitly asked for "Entrar com Google" button, so we wait for click.
                 });
-
-                // Esqueci Senha
-                const handleForgotPassword = () => {
-                    if (!authForm.value.email) {
-                        alert('Por favor, informe seu email corporativo.');
-                        return;
-                    }
-                    isLoading.value = true;
-
-                    // Integração REAL com o backend
-                    google.script.run.withSuccessHandler(res => {
-                        isLoading.value = false;
-                        alert(res.message);
-                        currentView.value = 'login';
-                    }).withFailureHandler(err => {
-                        isLoading.value = false;
-                        alert("Erro: " + err.message);
-                    }).requestPasswordReset(authForm.value.email);
-                };
-
-                const fetchUserData = () => {
-                    if (!authForm.value.id) return;
-                    isLoading.value = true;
-                    authForm.value.errorMessage = '';
-                    authForm.value.name = '';
-                    authForm.value.email = '';
-
-                    google.script.run.withSuccessHandler(res => {
-                        isLoading.value = false;
-                        authForm.value.name = res.nome;
-                        authForm.value.email = res.email;
-                    }).withFailureHandler(err => {
-                        isLoading.value = false;
-                        authForm.value.errorMessage = err.message;
-                    }).fetchUserByID(authForm.value.id);
-                };
-
-                const handleRegister = () => {
-                    if (!authForm.value.id || !authForm.value.name) return;
-                    isLoading.value = true;
-                    google.script.run.withSuccessHandler(res => {
-                        isLoading.value = false;
-                        alert(res.message);
-                        currentView.value = 'login';
-                        // Reset form
-                        authForm.value = { id: '', email: '', password: '', name: '', newPassword: '', confirmPassword: '', errorMessage: '' };
-                    }).withFailureHandler(err => {
-                        isLoading.value = false;
-                        alert(err.message);
-                    }).requestAccess(authForm.value.id, authForm.value.name, authForm.value.email);
-                };
-
-                const handleChangePassword = () => {
-                    if (authForm.value.newPassword !== authForm.value.confirmPassword) {
-                        authForm.value.errorMessage = "As senhas não conferem.";
-                        return;
-                    }
-                    if (authForm.value.newPassword.length < 6) {
-                        authForm.value.errorMessage = "A senha deve ter no mínimo 6 caracteres.";
-                        return;
-                    }
-                    isLoading.value = true;
-                    google.script.run.withSuccessHandler(res => {
-                        isLoading.value = false;
-                        alert(res.message);
-                        initApp();
-                    }).withFailureHandler(err => {
-                        isLoading.value = false;
-                        authForm.value.errorMessage = err.message;
-                    }).changePassword(userEmail.value, authForm.value.newPassword, true);
-                };
-
-                const initiateChangePassword = () => {
-                    authForm.value.newPassword = '';
-                    authForm.value.confirmPassword = '';
-                    authForm.value.errorMessage = '';
-                    currentView.value = 'change_password';
-                };
 
                 const initApp = () => {
                     currentView.value = 'app';
@@ -1212,7 +919,7 @@
                 const logout = () => {
                     userEmail.value = '';
                     currentView.value = 'login';
-                    authForm.value = { id: '', email: '', password: '', name: '', newPassword: '', confirmPassword: '', errorMessage: '' };
+                    authForm.value = { errorMessage: '' };
                 };
 
                 // --- APP METHODS ---
