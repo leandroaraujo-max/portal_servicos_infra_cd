@@ -7,8 +7,12 @@
 # URL da sua API (Fixa)
 $API_URL = "https://script.google.com/macros/s/AKfycbwcwKziwn37TfZgEJcHA_37l9aG6prf73CL-8JZ9pMgO9igU6mEC9iTrdNI1FbtI4Kr/exec"
 
-# Configuração de Log
-$LOG_FILE = "$PSScriptRoot\..\Logs\Log_Espelho_AD_$(Get-Date -Format 'yyyy-MM-dd').txt"
+$LogDir = "$PSScriptRoot\..\Logs"
+if (-not (Test-Path $LogDir)) {
+    New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+}
+
+$LOG_FILE = "$LogDir\Log_Espelho_AD_$(Get-Date -Format 'yyyy-MM-dd').txt"
 
 function Write-Log {
     param($Message)
