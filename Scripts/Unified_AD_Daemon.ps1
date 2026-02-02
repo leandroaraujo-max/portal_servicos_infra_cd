@@ -165,7 +165,7 @@ function Invoke-MirrorFetch {
     Write-Log "Buscando grupos para espelho: $modelOne (ID: $id)" "INFO"
     try {
         $groups = Get-ADPrincipalGroupMembership -Identity $modelOne -ErrorAction Stop | Select-Object -ExpandProperty Name
-        $jsonGroups = $groups | ConvertTo-Json -Compress
+        $jsonGroups = $groups -join ";"
         
         # Payload ajustado para a função updateMirrorResult do Backend
         $payload = @{
