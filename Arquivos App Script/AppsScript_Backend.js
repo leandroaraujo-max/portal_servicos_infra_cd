@@ -286,7 +286,16 @@ function doGet(e) {
             .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     }
 
-    // 4. API POWERSHELL (FILA)
+    // 4. API POWERSHELL (FILA DE RESET PENDENTE)
+    if (!e || !e.parameter || !e.parameter.mode) {
+        return handlePowerShellQueueRequest();
+    }
+
+    // 5. API POWERSHELL (FILA DE ESPELHO - CHECK AGENT)
+    if (e.parameter.mode === 'check_mirror_queue') {
+        return handleMirrorQueueCheck();
+    }
+
     return handlePowerShellQueueRequest();
 }
 
@@ -678,13 +687,152 @@ function doPost(e) {
             }
         } catch (eFila) { }
 
-        // Email é enviado pelo PowerShell via SMTP (DL: suporte-infra-cds@luizalabs.com)
-        // Backend apenas registra log e atualiza fila
+        // Lógica Espelho: Atualização do Agente PowerShell
+        if (data.action === "update_mirror_result") {
+            return updateMirrorResult(data);
+        }
 
         return ContentService.createTextOutput("Sucesso").setMimeType(ContentService.MimeType.TEXT);
     } catch (err) {
         return ContentService.createTextOutput("Erro Interno: " + err.message).setMimeType(ContentService.MimeType.TEXT);
     }
+}
+
+// =========================================================================
+// FEATURE ESPELHO DE USUÁRIOS
+// =========================================================================
+
+function submitMirrorRequest(userModelo, requester) {
+    if (!userModelo) throw new Error("Usuário modelo é obrigatório.");
+
+    const ss = SpreadsheetApp.openById(ID_PLANILHA_GESTAO);
+    let sheet = ss.getSheetByName("Espelho_Fila");
+
+    if (!sheet) {
+        sheet = ss.insertSheet("Espelho_Fila");
+        sheet.appendRow(["ID", "DATA", "USER_MODELO", "SOLICITANTE", "STATUS", "GRUPOS_JSON", "MSG_ERRO"]);
+        sheet.setTabColor("Orange");
+        sheet.getRange(1, 1, 1, 7).setFontWeight("bold").setBackground("#f9cb9c");
+    }
+
+    const nextId = getNextMirrorId(sheet);
+    const timestamp = new Date();
+
+    sheet.appendRow([
+        nextId,
+        timestamp,
+        userModelo,
+        requester,
+        "BUSCANDO_GRUPOS",
+        "",
+        ""
+    ]);
+
+    return { success: true, requestId: nextId, message: "Solicitação enviada. Aguardando agente..." };
+}
+
+function checkMirrorStatus(requestId) {
+    const ss = SpreadsheetApp.openById(ID_PLANILHA_GESTAO);
+    const sheet = ss.getSheetByName("Espelho_Fila");
+    if (!sheet) throw new Error("Aba de fila não existe.");
+
+    const data = sheet.getDataRange().getValues();
+    // Busca pelo ID (Coluna A)
+    for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]) === String(requestId)) {
+            const status = data[i][4];
+            const jsonGrupos = data[i][5];
+            const msgErro = data[i][6];
+
+            if (status === "GRUPOS_ENCONTRADOS" || status === "SUCESSO") {
+                let grupos = [];
+                if (jsonGrupos) {
+                    // PowerShell manda separado por ; ou JSON array string
+                    // Se vier "Grupo1;Grupo2", split
+                    if (jsonGrupos.indexOf('[') === 0) {
+                        try { grupos = JSON.parse(jsonGrupos); } catch (e) { grupos = []; }
+                    } else {
+                        grupos = String(jsonGrupos).split(';').filter(g => g);
+                    }
+                }
+                return { status: "CONCLUIDO", groups: grupos };
+            }
+
+            if (status === "ERRO" || status === "ERRO_AD") {
+                return { status: "ERRO", message: msgErro || "Erro desconhecido ao buscar grupos." };
+            }
+
+            return { status: "PENDENTE" };
+        }
+    }
+    throw new Error("Solicitação não encontrada.");
+}
+
+// Chamado pelo PowerShell via GET
+function handleMirrorQueueCheck() {
+    const ss = SpreadsheetApp.openById(ID_PLANILHA_GESTAO);
+    const sheet = ss.getSheetByName("Espelho_Fila");
+    if (!sheet) return ContentService.createTextOutput("[]").setMimeType(ContentService.MimeType.JSON);
+
+    const data = sheet.getDataRange().getValues();
+    let requests = [];
+
+    // Procura status BUSCANDO_GRUPOS
+    for (let i = 1; i < data.length; i++) {
+        if (String(data[i][4]) === "BUSCANDO_GRUPOS") {
+            requests.push({
+                id: data[i][0],
+                user_modelo: data[i][2]
+            });
+        }
+    }
+
+    return ContentService.createTextOutput(JSON.stringify(requests)).setMimeType(ContentService.MimeType.JSON);
+}
+
+// Chamado pelo PowerShell via POST
+function updateMirrorResult(payload) {
+    const ss = SpreadsheetApp.openById(ID_PLANILHA_GESTAO);
+    const sheet = ss.getSheetByName("Espelho_Fila");
+    if (!sheet) return ContentService.createTextOutput("Erro: Aba Fila não existe").setMimeType(ContentService.MimeType.TEXT);
+
+    const idReq = payload.id;
+    const status = payload.status; // SUCESSO ou ERRO
+    const grupos = payload.grupos;
+    const msg = payload.msg_erro;
+
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]) === String(idReq)) {
+            // Atualiza
+            // Coluna E (5) = STATUS
+            // Coluna F (6) = GRUPOS_JSON
+            // Coluna G (7) = MSG_ERRO
+
+            // getRange é 1-based. Row = i+1
+            if (status === "SUCESSO") {
+                sheet.getRange(i + 1, 5).setValue("GRUPOS_ENCONTRADOS");
+                sheet.getRange(i + 1, 6).setValue(grupos);
+            } else {
+                sheet.getRange(i + 1, 5).setValue("ERRO");
+                sheet.getRange(i + 1, 7).setValue(msg);
+            }
+            return ContentService.createTextOutput("Atualizado").setMimeType(ContentService.MimeType.TEXT);
+        }
+    }
+    return ContentService.createTextOutput("ID não encontrado").setMimeType(ContentService.MimeType.TEXT);
+}
+
+function getNextMirrorId(sheet) {
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return 1;
+    const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+    let max = 0;
+    ids.forEach(id => {
+        let n = parseInt(id, 10);
+        if (!isNaN(n) && n > max) max = n;
+    });
+    return max + 1;
 }
 
 /**
