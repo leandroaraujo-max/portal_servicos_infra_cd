@@ -796,31 +796,29 @@ function updateMirrorResult(payload) {
     const sheet = ss.getSheetByName("Espelho_Fila");
     if (!sheet) return ContentService.createTextOutput("Erro: Aba Fila não existe").setMimeType(ContentService.MimeType.TEXT);
 
-    const idReq = payload.id;
-    const status = payload.status; // SUCESSO ou ERRO
+    const idReq = String(payload.id).trim();
+    const status = payload.status;
     const grupos = payload.grupos;
     const msg = payload.msg_erro;
 
     const data = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
-        if (String(data[i][0]) === String(idReq)) {
-            // Atualiza
-            // Coluna E (5) = STATUS
-            // Coluna F (6) = GRUPOS_JSON
-            // Coluna G (7) = MSG_ERRO
+        const idNaPlanilha = String(data[i][0]).trim();
 
+        if (idNaPlanilha === idReq) {
             // getRange é 1-based. Row = i+1
             if (status === "SUCESSO") {
                 sheet.getRange(i + 1, 5).setValue("GRUPOS_ENCONTRADOS");
                 sheet.getRange(i + 1, 6).setValue(grupos);
+                sheet.getRange(i + 1, 7).setValue(""); // Limpa erro anterior
             } else {
                 sheet.getRange(i + 1, 5).setValue("ERRO");
                 sheet.getRange(i + 1, 7).setValue(msg);
             }
-            return ContentService.createTextOutput("Atualizado").setMimeType(ContentService.MimeType.TEXT);
+            return ContentService.createTextOutput("Sucesso: Atualizado ID " + idReq).setMimeType(ContentService.MimeType.TEXT);
         }
     }
-    return ContentService.createTextOutput("ID não encontrado").setMimeType(ContentService.MimeType.TEXT);
+    return ContentService.createTextOutput("Erro: ID " + idReq + " nao encontrado").setMimeType(ContentService.MimeType.TEXT);
 }
 
 function getNextMirrorId(sheet) {

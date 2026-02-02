@@ -20,12 +20,8 @@ $Arguments = "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$ScriptPath`""
 # Ação da Tarefa
 $Action = New-ScheduledTaskAction -Execute $PowershellPath -Argument $Arguments
 
-# Disparador (Trigger) - Iniciar diariamente e repetir a cada 1 minuto
-$Trigger = New-ScheduledTaskTrigger -Daily -At (Get-Date).Date.AddHours(6)
-# Configura a repetição manualmente acessando as propriedades do objeto COM interno se necessário, 
-# mas via PowerShell puro, ajustamos assim:
-$Trigger.Repetition.Interval = "PT1M" # 1 Minuto (Formato ISO8601 Duration)
-$Trigger.Repetition.Duration = "P3650D" # Indeterminado/Longo (10 anos)
+# Disparador (Trigger) - Iniciar agora e repetir a cada 1 minuto para sempre
+$Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 1) -RepetitionDuration ([TimeSpan]::MaxValue)
 
 # Configurações da Tarefa
 $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RunOnlyIfNetworkAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 1)
