@@ -1,4 +1,4 @@
-# 🔐 Gerenciamento de Usuários - Suporte Infra CDs v1.0.5
+# 🔐 Gerenciamento de Usuários - Suporte Infra CDs v1.1.0
 
 ## Sobre o Projeto
 Ferramenta desenvolvida em PowerShell com interface gráfica (Windows Forms) para automatizar o processo de reset de senhas de usuários do Active Directory e criações de conta no Turia.
@@ -32,6 +32,11 @@ O sistema integra-se com uma planilha Google Sheets (via Apps Script API) para b
   - Busca flexível: Pode pesquisar **sem selecionar filial** (Placeholder: "Digite sua filial Magalog").
   - Funcionalidade **"Lembrar-me"** para salvar credenciais locais.
   - Fila de acompanhamento completa (sem limites) com **Filtro por Filial** e **ID sequencial**.
+- **Espelho de Acesso (Novo):** 
+  - Permite buscar grupos de um usuário "modelo" no AD.
+  - Seleção múltipla de grupos para espelhamento.
+  - Envio de solicitações de espelhamento para aprovação técnica.
+  - Polling resiliente com `SpreadsheetApp.flush()` para garantir persistência imediata.
 
 ## Pré-Requisitos
 1. **Sistema Operacional:** Windows 10/11 ou Server (com PowerShell 5.1+).
@@ -87,20 +92,22 @@ clasp deploy -i <DEPLOYMENT_ID> -d "Descrição"
 
 ## Histórico de Versões
 
-### v1.0.7 (Atual)
-- [Auth] **Nova Autenticação**: Implementado Login com Google (Google Sign-In).
-- [Backend] Adicionada validação de domínios corporativos (@magazineluiza.com.br, @luizalabs.com, etc).
-- [Frontend] Removido formulário de login manual e fluxos de recuperação de senha.
-- [Security] Acesso restrito via `Session.getActiveUser()`.
+### v1.1.0 (Atual)
+- [Mirror] **Espelho de Acesso**: Nova aba para clonar grupos de um usuário modelo para múltiplos destinos.
+- [Daemon] Envio de grupos via string separada por `;` para compatibilidade total com Excel/Sheets.
+- [Backend] Adicionado `SpreadsheetApp.flush()` para evitar condições de corrida (Race Conditions).
+- [Fix] Mapeamento de campo `groups` / `grupos` unificado para evitar bugs de retorno do Daemon.
+- [UI] Indicador de versão atualizado para v1.1.0 com resiliência no polling do frontend.
+- [Deploy] Sincronização automática da URL de produção via CLI `clasp`.
 
-### v1.0.6
+### v1.0.8 / v1.0.9
 - [Daemon] Corrigido loop infinito de "ID não encontrado" (parâmetro `requestId` vs `id`).
-- [Backend] Corrigido erro "Parâmetros inválidos" no link de aprovação por email.
-- [Backend] Atualizado para aceitar status `GRUPOS_ENCONTRADOS` do Daemon como sucesso.
-- [UI] Logo LuizaLabs agora branco e sem fundo no header para melhor contraste.
-- [Deploy] Deployment URL fixada e sincronizada em todos os arquivos.
+- [Backend] Adicionado `SpreadsheetApp.flush()` na submissão de requests.
+- [Frontend] Adicionado `withFailureHandler` no polling para evitar travamentos silenciosos.
+- [UI] Remoção de botões legados de troca de senha no cabeçalho.
+- [Fix] Correção de `ReferenceError` (undefined variables) no setup() do Vue.
 
-### v1.0.5
+### v1.0.7
 - [PowerShell] Refinamento de layout: Ordem correta do Header e Faixa Rainbow
 - [PowerShell] Correção de sobreposição de textos no cabeçalho
 - [PowerShell] Fix SSL/CRL: Adicionado bypass de revogação para conexão estável com a API
