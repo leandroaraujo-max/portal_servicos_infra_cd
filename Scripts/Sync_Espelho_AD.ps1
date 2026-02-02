@@ -29,24 +29,34 @@ Import-Module ActiveDirectory
 
 try {
     # 2. Consulta a Fila na Nuvem (Google Sheets)
-    # Mode 'check_mirror_queue' deve ser implementado no Apps Script
-    Write-Log "Verificando fila de espelhamento..."
+    Write-Host "----------------------------------------------------------------" -ForegroundColor Cyan
+    Write-Host "Iniciando sicronização de Espelho AD..." -ForegroundColor White
+    Write-Log "Iniciando ciclo de verificação..."
+
+    Write-Host "Conectando API..." -NoNewline -ForegroundColor Gray
     
     $response = Invoke-RestMethod -Uri "$API_URL?mode=check_mirror_queue" -Method Get -ErrorAction Stop
     
-    if (-not $response) {
-        Write-Log "Nenhuma resposta da API."
+    Write-Host " [OK]" -ForegroundColor Green
+
+    # Verifica se há solicitações
+    if (-not $response -or $response.Count -eq 0) {
+        Write-Host "Nenhuma solicitação pendente encontrada na fila." -ForegroundColor Yellow
+        Write-Log "Fila vazia. Encerrando."
         exit
     }
-
-    # Se não for array, converte (caso venha 1 só objeto)
+    
+    # Se não for array, converte
     if ($response -isnot [Array]) { $response = @($response) }
+    
+    $count = $response.Count
+    Write-Host "$count solicitação(ões) pendente(s) encontrada(s)." -ForegroundColor Green
+    Write-Log "$count solicitações encontradas."
 
     # 3. Processa cada solicitação
     foreach ($item in $response) {
         if ($item.error) {
-            # Write-Log "API Info: $($item.error)" # Lista vazia ou erro
-            continue
+             continue
         }
 
         $idSolicitacao = $item.id
