@@ -70,7 +70,8 @@ function requestAccess(id, nome, email) {
     const timestamp = new Date();
     sheet.appendRow([id, nome, email.toLowerCase(), "", "", "PENDENTE", "TRUE", timestamp]);
 
-    const scriptUrl = ScriptApp.getService().getUrl();
+    // const scriptUrl = ScriptApp.getService().getUrl();
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbx45YnWy4cPAqlggJch0IcuF2FUNp6D32zx-r7iNyIyJhh_x72n1Wv9oAsv6D7KNLUp/exec";
     const approveLink = `${scriptUrl}?action=approve&email=${encodeURIComponent(email)}`;
 
     try {
