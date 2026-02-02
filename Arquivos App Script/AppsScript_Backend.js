@@ -779,10 +779,14 @@ function handleMirrorQueueCheck() {
 
     // Procura status BUSCANDO_GRUPOS
     for (let i = 1; i < data.length; i++) {
-        if (String(data[i][4]) === "BUSCANDO_GRUPOS") {
+        const rowId = data[i][0];
+        const status = String(data[i][4]);
+
+        // Só processa se tiver ID e se o status for correto
+        if (rowId && status === "BUSCANDO_GRUPOS") {
             requests.push({
-                id: data[i][0],
-                user_modelo: data[i][2]
+                id: String(rowId),
+                user_modelo: String(data[i][2])
             });
         }
     }
