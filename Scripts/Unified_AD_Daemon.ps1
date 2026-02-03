@@ -524,9 +524,7 @@ while ($true) {
             }
         }
         else {
-            $hora = Get-Date -Format 'HH:mm:ss'
-            # Só imprime se tiver passado algum tempo desde o último log ou modo debug
-            # Write-Host "[$hora] [DEBUG] Fila vazia." -ForegroundColor DarkGray
+            # Fila vazia - Aguardando próximo ciclo
         }
     }
     catch {
