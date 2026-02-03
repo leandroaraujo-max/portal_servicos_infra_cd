@@ -118,6 +118,58 @@ function Send-ResetEmail {
 
 # --- FUNÇÕES DE NEGÓCIO ---
 
+function Send-UnlockEmail {
+    param($Para, $CC, $Usuario, $NomeColaborador, $FromEmail)
+    $primeiroNome = $NomeColaborador.Split(" ")[0]
+    $assunto = "✅ Conta Desbloqueada - Suporte Infra CDs"
+    $remetente = "suporte-infra-cds@luizalabs.com"
+    if ($FromEmail -and $FromEmail -match "^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$") { $remetente = $FromEmail }
+
+    $corpoHtml = "
+    <div style='font-family: Arial; padding: 20px;'>
+        <h2 style='color: #059669;'>Olá, $primeiroNome!</h2>
+        <p>Sua conta de rede (<b>$Usuario</b>) foi desbloqueada e já está pronta para uso.</p>
+        <p>Caso ainda tenha problemas de acesso, retorne o contato com o analista: $remetente.</p>
+        <hr>
+        <p style='font-size: 11px; color: #666;'>Atenciosamente,<br>Equipe de Infraestrutura - Magalu</p>
+    </div>"
+    
+    try {
+        $msg = New-Object System.Net.Mail.MailMessage -ArgumentList $remetente, $Para, $assunto, $corpoHtml
+        if ($CC) { $CC -split ";" | ForEach-Object { if ($_) { $msg.CC.Add($_.Trim()) } } }
+        $msg.IsBodyHtml = $true
+        $smtp = New-Object System.Net.Mail.SmtpClient($smtpServer, 25)
+        $smtp.Send($msg)
+    }
+    catch { Write-Log "Erro envio email desbloqueio: $_" "ERROR" }
+}
+
+function Send-MirrorEmail {
+    param($Para, $Usuario, $NomeColaborador, $ModelUser, $FromEmail)
+    $primeiroNome = $NomeColaborador.Split(" ")[0]
+    $assunto = "🔄 Acessos Atualizados (Espelhamento) - Suporte Infra CDs"
+    $remetente = "suporte-infra-cds@luizalabs.com"
+    if ($FromEmail -and $FromEmail -match "^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$") { $remetente = $FromEmail }
+
+    $corpoHtml = "
+    <div style='font-family: Arial; padding: 20px;'>
+        <h2 style='color: #7c3aed;'>Olá, $primeiroNome!</h2>
+        <p>Seus acessos foram atualizados com base no modelo <b>$ModelUser</b>.</p>
+        <p>Os novos grupos e permissões já estão disponíveis em sua conta (<b>$Usuario</b>).</p>
+        <p>Qualquer dúvida, contate o analista responsável: $remetente.</p>
+        <hr>
+        <p style='font-size: 11px; color: #666;'>Atenciosamente,<br>Equipe de Infraestrutura - Magalu</p>
+    </div>"
+    
+    try {
+        $msg = New-Object System.Net.Mail.MailMessage -ArgumentList $remetente, $Para, $assunto, $corpoHtml
+        $msg.IsBodyHtml = $true
+        $smtp = New-Object System.Net.Mail.SmtpClient($smtpServer, 25)
+        $smtp.Send($msg)
+    }
+    catch { Write-Log "Erro envio email mirror: $_" "ERROR" }
+}
+
 function Send-RejectEmail {
     param($Para, $NomeSolicitante, $IdSolicitacao, $Tipo, $AnalistaEmail, $AnalistaNome)
     
@@ -174,7 +226,7 @@ function Send-RejectEmail {
         $msg.Body = $corpoHtml
         $msg.IsBodyHtml = $true
         
-        $smtp = New-Object System.Net.Mail.SmtpClient("smtp.luizalabs.com", 25) # Hardcoded SMTP for safety/consistency match with other funcs
+        $smtp = New-Object System.Net.Mail.SmtpClient("smtpml.magazineluiza.intranet", 25) # Servidor interno padrão Magalu
         $smtp.EnableSsl = $false # Internal relay usually no SSL on port 25
         $smtp.Send($msg)
         return $true
@@ -211,8 +263,8 @@ function Invoke-RejectUser {
 
     # Finaliza no Backend
     if ($Task.task_type -eq "MIRROR" -or $Task.task_type -eq "FETCH_GROUPS") {
-        # Mirror usa endpoint específico
-        Send-MirrorResult -Id $id -Status "REPROVADO" -Msg "Solicitação recusada pelo analista." -Type $Task.task_type
+        # Mirror usa a função genérica Send-Result
+        Send-Result -Id $id -Type $Task.task_type -Status "REPROVADO" -Msg "Solicitação recusada pelo analista." -Task $Task
     }
     else {
         # Reset usa endpoint padrão audit
@@ -244,8 +296,7 @@ function Invoke-ResetUser {
         Set-ADUser -Identity $user -ChangePasswordAtLogon $true -ErrorAction Stop
 
         # 5. Enviar Email (Personificado com E-mail do Analista)
-        # Nota: $Task.aprovador contém o email mapeado pelo GAS na coluna 'ANALISTA_RESPONSAVEL'
-        Send-ResetEmail -Para $Task.email_colaborador -CC $Task.email_gestor -Usuario $user -NomeColaborador $Task.nome -NovaSenha $newPassword -Executor "AUTOMACAO_DAEMON" -FromEmail $Task.aprovador
+        Send-ResetEmail -Para $Task.email_colaborador -CC $Task.email_gestor -Usuario $user -NomeColaborador $Task.nome -NovaSenha $newPassword -Executor "AUTOMACAO_DAEMON" -FromEmail $Task.analista
 
         # 6. Reportar Sucesso
         Send-Result -Id $id -Type "RESET" -Status "CONCLUIDO" -Msg "Senha resetada e email enviado." -Task $Task
@@ -266,6 +317,10 @@ function Invoke-UnlockUser {
 
     try {
         Unlock-ADAccount -Identity $user -ErrorAction Stop
+        
+        # Envia Email de Conclusão Personificado
+        Send-UnlockEmail -Para $Task.email_colaborador -CC $Task.email_gestor -Usuario $user -NomeColaborador $Task.nome -FromEmail $Task.analista
+
         Send-Result -Id $id -Type "UNLOCK" -Status "CONCLUIDO" -Msg "Conta desbloqueada com sucesso." -Task $Task
         Write-Log "DESBLOQUEIO #$id concluído." "SUCCESS"
     }
@@ -334,6 +389,18 @@ function Invoke-MirrorExecute {
         }
     }
     
+    # Envia Email de Conclusão Personificado para cada alvo
+    foreach ($target in $targets) {
+        # Busca AD para pegar o email do destino
+        try {
+            $destUser = Get-ADUser -Identity $target -Properties mail, displayName -ErrorAction SilentlyContinue
+            if ($destUser.mail) {
+                Send-MirrorEmail -Para $destUser.mail -Usuario $target -NomeColaborador $destUser.displayName -ModelUser $model -FromEmail $Task.analista
+            }
+        }
+        catch { }
+    }
+
     # Reportar Sucesso Final
     Send-Result -Id $id -Type "MIRROR" -Status "CONCLUIDO" -Msg "Espelhamento executado." -Task $Task
 }

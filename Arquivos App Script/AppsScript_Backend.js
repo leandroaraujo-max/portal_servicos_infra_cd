@@ -444,10 +444,11 @@ function submitResetQueue(requestData) {
 
     if (!queueSheet) {
         queueSheet = ss.insertSheet("Solicitações");
-        // Ajustado para 12 colunas: ID, DATA_HORA, FILIAL, USER_NAME, NOME, EMAIL_COLAB, CENTRO_CUSTO, ANALISTA_RESPONSAVEL, SOLICITANTE, TIPO_TAREFA, STATUS_PROCESSAMENTO, STATUS_APROVACAO
-        queueSheet.appendRow(["ID", "DATA_HORA", "FILIAL", "USER_NAME", "NOME", "EMAIL_COLAB", "CENTRO_CUSTO", "ANALISTA_RESPONSAVEL", "SOLICITANTE", "STATUS_PROCESSAMENTO", "STATUS_APROVACAO", "TIPO_TAREFA", "DETALHES_ADICIONAIS"]);
+        // SCHEMA COMPATÍVEL v1.2.1 (A-P)
+        // A:ID, B:DATA, C:FILIAL, D:USER, E:NOME, F:EMAIL, G:CC, H:ANALISTA, I:SOLICITANTE, J:PROC, K:APROV, L:TIPO, M:DETALHES, N:MODELO, O:DESTINOS, P:GRUPOS
+        queueSheet.appendRow(["ID", "DATA_HORA", "FILIAL", "USER_NAME", "NOME", "EMAIL_COLAB", "CENTRO_CUSTO", "ANALISTA_RESPONSAVEL", "SOLICITANTE", "STATUS_PROCESSAMENTO", "STATUS_APROVACAO", "TIPO_TAREFA", "DETALHES_ADICIONAIS", "MODELO", "DESTINOS", "GRUPOS"]);
         queueSheet.setTabColor("Blue");
-        queueSheet.getRange(1, 1, 1, 13).setFontWeight("bold").setBackground("#cfe2f3");
+        queueSheet.getRange(1, 1, 1, 16).setFontWeight("bold").setBackground("#cfe2f3");
     }
 
     const timestamp = new Date();
@@ -461,19 +462,22 @@ function submitResetQueue(requestData) {
     requestData.users.forEach(u => {
         const nextId = getNextQueueId(queueSheet);
         queueSheet.appendRow([
-            nextId,
-            timestamp,
-            requestData.filial || u.filial,
-            u.user_name,
-            u.nome,
-            u.email,
-            u.centro_custo,
-            finalAnalystEmail, // Grava Email em vez de Nome
-            requesterEmail,
-            "PENDENTE",
-            "PENDENTE",
-            requestData.task_type || "RESET",
-            ""
+            nextId,                         // A (0)
+            timestamp,                      // B (1)
+            requestData.filial || u.filial, // C (2)
+            u.user_name,                    // D (3)
+            u.nome,                         // E (4)
+            u.email,                        // F (5)
+            u.centro_custo,                 // G (6)
+            finalAnalystEmail,              // H (7) - ANALISTA (ORIGINAL)
+            requesterEmail,                 // I (8) - SOLICITANTE (ORIGINAL)
+            "PENDENTE",                     // J (9) - STATUS_PROC
+            "PENDENTE",                     // K (10) - STATUS_APROV
+            requestData.task_type || "RESET", // L (11) - TIPO
+            "",                             // M (12) - DETALHES
+            "",                             // N (13) - MODELO
+            "",                             // O (14) - DESTINOS
+            ""                              // P (15) - GRUPOS
         ]);
 
         const emailType = requestData.task_type === "DESBLOQUEIO_CONTA" ? "DESBLOQUEIO" : "RESET";
@@ -533,8 +537,8 @@ function getQueueWeb() {
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) return [];
 
-    // Retorna todos os registros (sem limite) - Ajustado para 12 colunas
-    const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues();
+    // Retorna todos os registros (sem limite) - Ajustado para v1.2.1
+    const data = sheet.getRange(2, 1, lastRow - 1, 16).getValues();
 
     return data.reverse().map(r => ({
         id: r[0],
@@ -542,10 +546,10 @@ function getQueueWeb() {
         filial: String(r[2]),
         user: r[3],
         nome: r[4],
-        analista: r[7],
-        status: r[9], // Col J
-        aprovacao: r[10], // Col K
-        tipo: r[11] // Col L
+        analista: r[7],  // Col H (7) - Restaurado
+        status: r[9],    // Col J (9) - Restaurado
+        aprovacao: r[10],// Col K (10) - Restaurado
+        tipo: r[11]      // Col L (11) - Restaurado
     }));
 }
 
@@ -758,7 +762,10 @@ function handleMirrorQueueCheck() {
 function updateMirrorResult(payload) {
     const ss = SpreadsheetApp.openById(ID_PLANILHA_GESTAO);
     const type = payload.type || "FETCH_GROUPS";
-    const sheetName = (type === "FETCH_GROUPS") ? "Espelho_Fila" : "Espelho_Solicitacoes";
+
+    // FETCH_GROUPS ainda fica na aba temporária Espelho_Fila
+    // MIRROR e outros agora ficam na aba Solicitações
+    const sheetName = (type === "FETCH_GROUPS") ? "Espelho_Fila" : "Solicitações";
     const sheet = ss.getSheetByName(sheetName);
 
     if (!sheet) return ContentService.createTextOutput("Erro: Aba " + sheetName + " nao existe").setMimeType(ContentService.MimeType.TEXT);
@@ -768,9 +775,13 @@ function updateMirrorResult(payload) {
     const msg = payload.msg_error;
 
     const data = sheet.getDataRange().getValues();
-    const statusCol = (type === "FETCH_GROUPS") ? 5 : 8; // Coluna E vs Coluna H
-    const errorCol = (type === "FETCH_GROUPS") ? 7 : 9;  // Coluna G vs Coluna I
-    const resultCol = 6; // Para grupos (FETCH_GROUPS)
+
+    // NOVO SCHEMA v1.2.1 (Solicitações)
+    // Col J (9) = STATUS_PROCESSAMENTO
+    // Col M (12) = DETALHES / ERRO
+    const statusCol = (type === "FETCH_GROUPS") ? 5 : 10; // Col E vs Col J (10 na Range)
+    const errorCol = (type === "FETCH_GROUPS") ? 7 : 13; // Col G vs Col M (13 na Range)
+    const resultCol = 6; // Para grupos (FETCH_GROUPS) na Col F
 
     for (let i = 1; i < data.length; i++) {
         if (String(data[i][0]).trim() === idReq) {
@@ -820,41 +831,39 @@ function submitMirrorExecution(data) {
     if (!analyst) throw new Error("Analista não informado.");
 
     const ss = SpreadsheetApp.openById(ID_PLANILHA_GESTAO);
-    let sheet = ss.getSheetByName("Espelho_Solicitacoes");
+    let sheet = ss.getSheetByName("Solicitações");
 
-    if (!sheet) {
-        sheet = ss.insertSheet("Espelho_Solicitacoes");
-        sheet.appendRow(["ID", "DATA", "MODELO", "DESTINOS", "GRUPOS", "SOLICITANTE", "ANALISTA_RESPONSAVEL", "STATUS", "ERRO", "STATUS_APROVACAO"]);
-        sheet.setTabColor("Yellow");
-        sheet.getRange(1, 1, 1, 10).setFontWeight("bold").setBackground("#fff2cc");
-    }
-
-    const nextId = getNextMirrorId(sheet);
+    // Usa getNextQueueId pois agora o ID é unificado
+    const nextId = getNextQueueId(sheet);
     const timestamp = new Date();
     const requesterEmail = Session.getActiveUser().getEmail();
 
-    // Mapeamento Inteligente
     const analystData = mapAnalystByEmail(requesterEmail);
     const finalAnalystEmail = analystData ? analystData.email : requesterEmail;
     const finalAnalystName = analystData ? analystData.nome : analyst;
 
     sheet.appendRow([
-        nextId,
-        timestamp,
-        modelUser,
-        JSON.stringify(targets),
-        JSON.stringify(groups),
-        requesterEmail,
-        finalAnalystEmail, // Grava E-mail
-        "PENDENTE_EXECUCAO",
-        "",
-        "PENDENTE"
+        nextId,             // A (0)
+        timestamp,          // B (1)
+        "ESPELHO",          // C (2)
+        "Multiplos",        // D (3)
+        "Espelhamento AD",  // E (4)
+        "",                 // F (5)
+        "",                 // G (6)
+        finalAnalystEmail,  // H (7) - ANALISTA
+        requesterEmail,     // I (8) - SOLICITANTE
+        "PENDENTE",         // J (9) - STATUS_PROC
+        "PENDENTE",         // K (10) - STATUS_APROV
+        "MIRROR",           // L (11) - TIPO
+        "",                 // M (12) - DETALHES
+        modelUser,          // N (13) - MODELO
+        JSON.stringify(targets), // O (14) - DESTINOS
+        JSON.stringify(groups)   // P (15) - GRUPOS
     ]);
 
     // Enviar Notificação de Aprovação
     sendApprovalEmail(finalAnalystName, finalAnalystEmail, nextId, "MIRROR", modelUser, targets.length + " destinos");
-
-    return { success: true, requestId: nextId };
+    return true;
 }
 
 // =========================================================================
@@ -868,11 +877,12 @@ function handleApprovalAction(e) {
     const id = e.parameter.id;
     const type = e.parameter.type; // RESET | MIRROR
 
-    if (!id || !type) return HtmlService.createHtmlOutput("<h3>Erro: Parâmetros inválidos.</h3>");
+    if (!id) return HtmlService.createHtmlOutput("<h3>Erro: ID não informado.</h3>");
 
     const ss = SpreadsheetApp.openById(ID_PLANILHA_GESTAO);
-    let sheetName = (type === "RESET" || type === "DESBLOQUEIO" || type === "DESBLOQUEIO_CONTA") ? "Solicitações" : "Espelho_Solicitacoes";
-    let statusCol = (type === "RESET" || type === "DESBLOQUEIO" || type === "DESBLOQUEIO_CONTA") ? 11 : 10; // Coluna K (11) é STATUS_APROVACAO na planilha nova
+    // UNIFICAÇÃO v1.2.1: Tudo na aba Solicitações
+    const sheetName = "Solicitações";
+    const statusCol = 11; // Coluna K (Status Aprovação) (1-based index)
 
     const sheet = ss.getSheetByName(sheetName);
     if (!sheet) return HtmlService.createHtmlOutput("<h3>Erro: Base de dados não encontrada.</h3>");
@@ -883,37 +893,13 @@ function handleApprovalAction(e) {
 
     for (let i = 1; i < data.length; i++) {
         if (String(data[i][0]).trim() === String(id)) {
-            // Verifica se já foi finalizado
-            if (String(data[i][8]).match(/SUCESSO|CONCLU|FINALIZADO/)) {
+            // Verifica se já foi finalizado (Col J = Index 9)
+            if (String(data[i][9]).match(/SUCESSO|CONCLU|FINALIZADO/)) {
                 return HtmlService.createHtmlOutput("<h2 style='color:orange'>Atenção: Esta solicitação já foi finalizada.</h2>");
             }
 
             // Atualiza STATUS_APROVACAO
             sheet.getRange(i + 1, statusCol).setValue(newStatus);
-
-            let requesterEmail = "";
-            let analystEmail = "";
-
-            if (type === "RESET" || type === "DESBLOQUEIO" || type === "DESBLOQUEIO_CONTA") {
-                // Solicitações: Analista=Col 7 (H), Solicitante=Col 8 (I)
-                analystEmail = data[i][7];
-                requesterEmail = data[i][8];
-
-                // REMOVIDO: Daemon fará isso
-                // if (action === "reject") { sheet.getRange(i + 1, 10).setValue("REPROVADO"); }
-            } else if (type === "MIRROR") {
-                // Espelho: Solicitante=Col 5 (F), Analista=Col 6 (G)
-                requesterEmail = data[i][5];
-                analystEmail = data[i][6];
-
-                // REMOVIDO: Daemon fará isso
-                // if (action === "reject") { sheet.getRange(i + 1, 8).setValue("REPROVADO"); }
-            }
-
-            // Envia e-mail de Reprovação ao Solicitante
-            // REMOVIDO: Daemon fará isso
-            // if (action === "reject" && requesterEmail) { sendRejectionEmail(...) }
-
             found = true;
             break;
         }
@@ -923,12 +909,12 @@ function handleApprovalAction(e) {
         let cor = (action === "approve") ? "green" : "red";
         let texto = (action === "approve") ? "APROVADA" : "REPROVADA";
         return HtmlService.createHtmlOutput(`
-            <div style='font-family: Arial; text-align: center; padding: 50px;'>
-                <h1 style='color:${cor}'>SOLICITAÇÃO ${texto} COM SUCESSO!</h1>
-                <p>O sistema processará a requisição conforme sua decisão.</p>
-                <p>Pode fechar esta janela.</p>
-            </div>
-        `);
+                <div style='font-family: Arial; text-align: center; padding: 50px;'>
+                    <h1 style='color:${cor}'>SOLICITAÇÃO ${texto} COM SUCESSO!</h1>
+                    <p>O sistema processará a requisição conforme sua decisão.</p>
+                    <p>Pode fechar esta janela.</p>
+                </div>
+            `);
     } else {
         return HtmlService.createHtmlOutput("<h3 style='color:red'>Erro: ID da solicitação não encontrado.</h3>");
     }
@@ -1265,46 +1251,47 @@ function handleUnifiedQueue() {
     const ss = SpreadsheetApp.openById(ID_PLANILHA_GESTAO);
     let requests = [];
 
-    // 1. RESET (Solicitações) - Requer APROVAÇÃO
-    const sheetReset = ss.getSheetByName("Solicitações");
-    if (sheetReset) {
-        const rData = sheetReset.getDataRange().getDisplayValues();
-        // A partir da linha 2 (índice 1)
-        for (let i = 1; i < rData.length; i++) {
-            let row = rData[i];
-            // Remove check row.length < 11 pois a ultima coluna pode estar vazia visualmente
+    // 1. FILA ÚNICA UNIFICADA (v1.2.0)
+    const sheetMaster = ss.getSheetByName("Solicitações");
+    if (sheetMaster) {
+        const data = sheetMaster.getDataRange().getDisplayValues();
+        for (let i = 1; i < data.length; i++) {
+            let row = data[i];
 
-            let statusProc = row[9] ? String(row[9]).toUpperCase().trim() : "";           // Col 10 (J)
-            let statusAprov = row[10] ? String(row[10]).toUpperCase().trim() : "";        // Col 11 (K)
-            let taskType = row[11] || "RESET";                                            // Col 12 (L)
+            let statusProc = row[9] ? String(row[9]).toUpperCase().trim() : "";  // Col J
+            let statusAprov = row[10] ? String(row[10]).toUpperCase().trim() : ""; // Col K
+            let taskType = row[11] ? String(row[11]).toUpperCase().trim() : "RESET"; // Col L
 
-            // STATUS_PROCESSAMENTO=PENDENTE e STATUS_APROVACAO=APROVADO OU REPROVADO
             if (statusProc === "PENDENTE" && (statusAprov === "APROVADO" || statusAprov === "REPROVADO")) {
-                let filial = row[2];
-                let centroCusto = row[6];
-                let emailsLideres = [];
-                try { emailsLideres = fetchLeadersEmails(filial, centroCusto); } catch (e) { }
-                let emailGestor = (emailsLideres && emailsLideres.length > 0) ? emailsLideres[0] : "";
-
-                requests.push({
-                    task_type: taskType, // TIPO_TAREFA - Col 12 (L)
+                let r = {
                     id_solicitacao: row[0],
-                    user_name: row[3],
+                    task_type: taskType,
+                    status_aprovacao: statusAprov,
+                    analista: row[7],     // Col H
+                    solicitante: row[8],  // Col I
+                    aba: row[2],          // Col C (Filial)
                     nome: row[4],
-                    nova_senha: generatePassword(),
-                    email_colaborador: row[5],
-                    email_gestor: emailGestor,
-                    centro_custo: centroCusto,
-                    aba: filial,
-                    analista: row[7],
-                    solicitante: row[8],
-                    status_aprovacao: statusAprov
-                });
+                    user_name: row[3],
+                };
+
+                // Dados Específicos por Tipo
+                if (taskType === "MIRROR" || taskType === "ESPELHO_USUARIO") {
+                    r.user_modelo = row[13]; // Col N
+                    r.targets = JSON.parse(row[14] || "[]"); // Col O
+                    r.grupos = JSON.parse(row[15] || "[]");  // Col P
+                } else {
+                    // Reset / Unlock
+                    r.nova_senha = generatePassword();
+                    r.email_colaborador = row[5];
+                    r.centro_custo = row[6];
+                }
+
+                requests.push(r);
             }
         }
     }
 
-    // 2. FETCH GROUPS (Espelho_Fila) - NÃO Requer Aprovação (Apenas leitura)
+    // 2. FETCH GROUPS (Mantém na Espelho_Fila por ser temporário/volátil)
     const sheetFila = ss.getSheetByName("Espelho_Fila");
     if (sheetFila) {
         const fData = sheetFila.getDataRange().getValues();
@@ -1315,28 +1302,6 @@ function handleUnifiedQueue() {
                     task_type: "FETCH_GROUPS",
                     id_solicitacao: String(fData[i][0]),
                     user_modelo: fData[i][2]
-                });
-            }
-        }
-    }
-
-    // 3. EXECUTE MIRROR (Espelho_Solicitacoes) - Requer APROVAÇÃO
-    const sheetExec = ss.getSheetByName("Espelho_Solicitacoes");
-    if (sheetExec) {
-        const eData = sheetExec.getDataRange().getValues();
-        for (let i = 1; i < eData.length; i++) {
-            let status = String(eData[i][7]).toUpperCase().trim();          // Col H
-            let statusAprov = String(eData[i][9]).toUpperCase().trim();     // Col J
-
-            if (status === "PENDENTE_EXECUCAO" && (statusAprov === "APROVADO" || statusAprov === "REPROVADO")) {
-                requests.push({
-                    task_type: "MIRROR",
-                    id_solicitacao: String(eData[i][0]),
-                    user_modelo: eData[i][2],
-                    targets: JSON.parse(eData[i][3]),
-                    grupos: JSON.parse(eData[i][4]),
-                    analista: eData[i][6],
-                    status_aprovacao: statusAprov
                 });
             }
         }
