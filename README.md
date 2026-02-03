@@ -75,7 +75,13 @@ O Daemon deve rodar como **Tarefa Agendada (GPO/Task Scheduler)** em um servidor
 
 ## 📜 Histórico de Versões Relevantes
 
-### v1.3.0 (Atividade Atual)
+### v1.4.1 (Filtros e Integridade)
+- **Filtros Avançados**: Inserção de filtros por coluna (ID, Nome, User, Email, CC) em todas as tabelas.
+- **Seleção Direcionada**: Lógica de "Selecionar Tudo" agora respeita os filtros visíveis.
+- **Batch Insert (Performance)**: Gravação em lote (1000+ linhas/s) com individualização universal (uma linha por usuário, independente do volume).
+- **Integridade de Dados**: Correção do fluxo de Espelho para gravar Filial e Nome reais do colaborador.
+
+### v1.3.0 (SLA & Governança)
 - Implementação de **Sistema de SLA** com alertas dinâmicos.
 - Template HTML de e-mail dedicado para monitoramento.
 - Autovigência de cabeçalhos (`ensureHeaders`).

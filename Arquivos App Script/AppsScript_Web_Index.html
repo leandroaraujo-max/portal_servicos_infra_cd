@@ -331,7 +331,22 @@
                                     </button>
                                 </div>
                                 <div v-if="mirrorStatusMsg"
-                                    class="mt-2 text-sm text-orange-600 font-medium animate-pulse">{{ mirrorStatusMsg }}
+                                    class="mt-4 flex items-center justify-between bg-orange-50 border border-orange-100 rounded-lg p-3">
+                                    <div class="text-sm text-orange-600 font-medium flex items-center gap-2">
+                                        <svg class="animate-spin h-4 w-4 text-orange-600"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                        {{ mirrorStatusMsg }}
+                                    </div>
+                                    <button @click="cancelMirrorPoll"
+                                        class="text-xs text-red-600 hover:text-red-800 font-bold underline">
+                                        CANCELAR
+                                    </button>
                                 </div>
                             </div>
 
@@ -399,7 +414,12 @@
                                             <tr>
                                                 <th
                                                     class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase w-10">
-                                                    Sel.</th>
+                                                    <input type="checkbox"
+                                                        @change="e => selectAllMirrorTargets(e.target.checked)"
+                                                        :checked="allMirrorSelected"
+                                                        class="rounded border-gray-300 text-blue-600 h-4 w-4"
+                                                        title="Selecionar visíveis">
+                                                </th>
                                                 <th
                                                     class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">
                                                     ID</th>
@@ -416,9 +436,33 @@
                                                     class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">
                                                     Centro de Custo</th>
                                             </tr>
+                                            <!-- FILTROS DE COLUNA (ESPELHO) -->
+                                            <tr class="bg-gray-50">
+                                                <th class="px-2 py-1"></th>
+                                                <th class="px-2 py-1"><input type="text" v-model="mirrorFilters.id"
+                                                        placeholder="Filtrar ID"
+                                                        class="w-11/12 text-xs border-gray-300 rounded p-1 focus:ring-blue-500 font-normal">
+                                                </th>
+                                                <th class="px-2 py-1"><input type="text" v-model="mirrorFilters.nome"
+                                                        placeholder="Filtrar Nome"
+                                                        class="w-11/12 text-xs border-gray-300 rounded p-1 focus:ring-blue-500 font-normal">
+                                                </th>
+                                                <th class="px-2 py-1"><input type="text"
+                                                        v-model="mirrorFilters.user_name" placeholder="Filtrar User"
+                                                        class="w-11/12 text-xs border-gray-300 rounded p-1 focus:ring-blue-500 font-normal">
+                                                </th>
+                                                <th class="px-2 py-1"><input type="text" v-model="mirrorFilters.email"
+                                                        placeholder="Filtrar Email"
+                                                        class="w-full text-xs border-gray-300 rounded p-1 focus:ring-blue-500 font-normal">
+                                                </th>
+                                                <th class="px-2 py-1"><input type="text"
+                                                        v-model="mirrorFilters.centro_custo" placeholder="Filtrar CC"
+                                                        class="w-full text-xs border-gray-300 rounded p-1 focus:ring-blue-500 font-normal">
+                                                </th>
+                                            </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
-                                            <tr v-for="u in mirrorSearchResults" :key="u.user_name"
+                                            <tr v-for="u in filteredMirrorResults" :key="u.user_name"
                                                 class="hover:bg-blue-50 transition-colors">
                                                 <td class="px-4 py-3"><input type="checkbox" v-model="u.selected"
                                                         class="rounded border-gray-300 text-blue-600 h-4 w-4"></td>
@@ -507,14 +551,6 @@
                         </div>
 
                         <div v-if="hasResults" class="flex flex-wrap items-center justify-between gap-4 pb-2">
-                            <div class="flex items-center space-x-2">
-                                <div class="text-xs font-bold text-gray-500 uppercase">Filtro Rápido (CC):</div>
-                                <select v-model="selectedCostCenter"
-                                    class="text-xs border-gray-300 rounded-md border p-1.5 focus:ring-blue-500 bg-white shadow-sm min-w-[200px]">
-                                    <option value="">TODOS OS CENTROS DE CUSTO</option>
-                                    <option v-for="cc in uniqueCostCenters" :key="cc" :value="cc">{{ cc }}</option>
-                                </select>
-                            </div>
                             <div class="text-xs text-gray-400">Encontrados: {{ filteredResults.length }}</div>
                         </div>
 
@@ -570,6 +606,17 @@
                                                 Centro de Custo
                                                 <span v-if="resultSortColumn === 'centro_custo'" class="ml-1">{{
                                                     resultSortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                            </th>
+                                        </tr>
+                                        <!-- FILTROS DE COLUNA (Adjusted Width) -->
+                                        <tr class="bg-gray-100">
+                                            <th class="px-2 py-1"></th>
+                                            class="w-full text-xs border-gray-300 rounded p-1 focus:ring-blue-500
+                                            font-normal">
+                                            </th>
+                                            <th class="px-2 py-1"><input type="text"
+                                                    v-model="searchFilters.centro_custo" placeholder="Filtrar CC"
+                                                    class="w-full text-xs border-gray-300 rounded p-1 focus:ring-blue-500 font-normal">
                                             </th>
                                         </tr>
                                     </thead>
@@ -904,6 +951,10 @@
                 const resultSortColumn = ref('nome');
                 const resultSortDirection = ref('asc');
 
+                // DATA FILTERS (v1.4.0)
+                const searchFilters = ref({ id: '', nome: '', user_name: '', email: '', centro_custo: '' });
+                const mirrorFilters = ref({ id: '', nome: '', user_name: '', email: '', centro_custo: '' });
+
                 const rememberMe = ref(false);
 
                 // --- AUTH METHODS ---
@@ -972,7 +1023,7 @@
 
                 const confirmAndSend = () => {
                     isConfirmModalVisible.value = false;
-                    const selected = searchResults.value.filter(u => u.selected);
+                    const selected = filteredResults.value.filter(u => u.selected); // Changed to filteredResults
                     submitting.value = true;
                     const taskType = currentTab.value === 'unlock' ? 'DESBLOQUEIO_CONTA' : 'RESET';
                     const data = {
@@ -1029,12 +1080,13 @@
 
                 const pollMirrorStatus = (reqId) => {
                     let attempts = 0;
-                    const maxAttempts = 90;
+                    // Reduzido para 30 tentativas de 2s = 60 segundos
+                    const maxAttempts = 30;
                     if (mirrorPollInterval.value) clearInterval(mirrorPollInterval.value);
 
                     mirrorPollInterval.value = setInterval(() => {
                         attempts++;
-                        mirrorStatusMsg.value = `Aguardando grupos do AD... (${attempts * 2}s)`;
+                        mirrorStatusMsg.value = `Aguardando grupos do AD... (${attempts * 2}s / ${maxAttempts * 2}s)`;
 
                         google.script.run.withSuccessHandler(res => {
                             if (res.status === 'CONCLUIDO') {
@@ -1050,16 +1102,24 @@
                             }
                         }).withFailureHandler(e => {
                             console.error("Poll Error:", e);
-                            mirrorStatusMsg.value = `Erro conexão: ${e.message}. Tentando...`;
+                            // Não para o polling por erro de rede pontual
                         }).checkMirrorStatus(reqId);
 
                         if (attempts >= maxAttempts) {
                             clearInterval(mirrorPollInterval.value);
                             mirrorLoading.value = false;
                             mirrorStatusMsg.value = '';
-                            alert('Tempo esgotado. Verifique o servidor local.');
+                            if (confirm('O tempo limite foi atingido. O agente local pode estar offline. Deseja tentar novamente?')) {
+                                fetchMirrorGroups();
+                            }
                         }
                     }, 2000);
+                };
+
+                const cancelMirrorPoll = () => {
+                    if (mirrorPollInterval.value) clearInterval(mirrorPollInterval.value);
+                    mirrorLoading.value = false;
+                    mirrorStatusMsg.value = '';
                 };
 
                 const performMirrorSearch = () => {
@@ -1078,11 +1138,27 @@
                     mirrorGroups.value.forEach(g => g.selected = val);
                 };
 
+                // NEW: Select All Visible Targets (Mirror)
+                const selectAllMirrorTargets = (val) => {
+                    filteredMirrorResults.value.forEach(u => u.selected = val);
+                };
+
                 const selectedGroupsCount = computed(() => mirrorGroups.value.filter(g => g.selected).length);
-                const selectedTargetsCount = computed(() => mirrorSearchResults.value.filter(u => u.selected).length);
+                const selectedTargetsCount = computed(() => filteredMirrorResults.value.filter(u => u.selected).length); // Use Filtered
 
                 const submitMirrorFinal = () => {
-                    const targets = mirrorSearchResults.value.filter(u => u.selected).map(u => u.user_name);
+                    // FIX v1.3.6: Envia objetos completos para popular colunas nas Solicitações
+                    // CHANGE v1.4.0: Use filteredMirrorResults instead of full list to respect user filters? Or just check selected?
+                    // Usually we only send SELECTED users. The filter is just for VIEW/SELECTION.
+                    // But 'selectAllMirrorTargets' only selects VISIBLE ones.
+                    // So we iterate over mirrorSearchResults (the full list) and pick selected ones.
+                    const targets = mirrorSearchResults.value.filter(u => u.selected).map(u => ({
+                        user_name: u.user_name,
+                        nome: u.nome,
+                        email: u.email,
+                        centro_custo: u.centro_custo,
+                        filial: u.filial // CORREÇÃO v1.4.1: Enviar Filial real
+                    }));
                     const groups = mirrorGroups.value.filter(g => g.selected).map(g => g.name);
 
                     if (targets.length === 0) return alert("Selecione ao menos um usuário de destino.");
@@ -1111,6 +1187,7 @@
                     mirrorGroups.value = [];
                     mirrorSearchResults.value = [];
                     mirrorSearchQuery.value = '';
+                    mirrorFilters.value = { id: '', nome: '', user_name: '', email: '', centro_custo: '' }; // Reset filters
                     currentTab.value = 'queue';
                     loadQueue();
                 };
@@ -1217,27 +1294,45 @@
 
                 // Computed
                 const uniqueCostCenters = computed(() => [...new Set(searchResults.value.map(u => u.centro_custo))].sort());
-                const filteredResults = computed(() => {
-                    let results = !selectedCostCenter.value ? searchResults.value : searchResults.value.filter(u => u.centro_custo === selectedCostCenter.value);
 
-                    // Ordenação dos resultados
-                    return [...results].sort((a, b) => {
-                        let aVal = a[resultSortColumn.value];
-                        let bVal = b[resultSortColumn.value];
+                // FILTER LOGIC (v1.4.0)
+                const filterList = (list, filters, sortCol, sortDir) => {
+                    let res = list;
+                    // Column Filters
+                    if (filters.id) res = res.filter(u => String(u.id || '').toLowerCase().includes(filters.id.toLowerCase()));
+                    if (filters.nome) res = res.filter(u => (String(u.nome || '') + ' ' + String(u.cargo || '')).toLowerCase().includes(filters.nome.toLowerCase()));
+                    if (filters.user_name) res = res.filter(u => String(u.user_name || '').toLowerCase().includes(filters.user_name.toLowerCase()));
+                    if (filters.email) res = res.filter(u => String(u.email || '').toLowerCase().includes(filters.email.toLowerCase()));
+                    if (filters.centro_custo) res = res.filter(u => String(u.centro_custo || '').toLowerCase().includes(filters.centro_custo.toLowerCase()));
 
-                        // Tratamento para strings (case-insensitive)
+                    // Sort
+                    return [...res].sort((a, b) => {
+                        let aVal = a[sortCol];
+                        let bVal = b[sortCol];
                         if (typeof aVal === 'string') aVal = aVal.toLowerCase();
                         if (typeof bVal === 'string') bVal = bVal.toLowerCase();
-
-                        const direction = resultSortDirection.value === 'asc' ? 1 : -1;
+                        const direction = sortDir === 'asc' ? 1 : -1;
                         if (aVal > bVal) return direction;
                         if (aVal < bVal) return -direction;
                         return 0;
                     });
+                };
+
+                const filteredResults = computed(() => {
+                    // Apply column filters
+                    // REMOVED: selectedCostCenter (Quick Filter)
+                    let results = searchResults.value;
+                    return filterList(results, searchFilters.value, resultSortColumn.value, resultSortDirection.value);
                 });
+
+                const filteredMirrorResults = computed(() => {
+                    return filterList(mirrorSearchResults.value, mirrorFilters.value, 'nome', 'asc');
+                });
+
                 const hasResults = computed(() => searchResults.value.length > 0);
-                const selectedCount = computed(() => filteredResults.value.filter(u => u.selected).length);
+                const selectedCount = computed(() => filteredResults.value.filter(u => u.selected).length); // Use filtered
                 const allSelected = computed(() => filteredResults.value.length > 0 && filteredResults.value.every(u => u.selected));
+                const allMirrorSelected = computed(() => filteredMirrorResults.value.length > 0 && filteredMirrorResults.value.every(u => u.selected));
 
                 // Computed properties para filtros da fila
                 const uniqueQueueFilials = computed(() => [...new Set(queueData.value.map(item => item.filial))].sort());
@@ -1322,7 +1417,9 @@
                     // Mirror
                     switchTab, mirrorForm, mirrorGroups, mirrorLoading, mirrorStatusMsg, fetchMirrorGroups, selectAllGroups, selectedGroupsCount, submitMirrorFinal,
                     mirrorStep, mirrorSearchQuery, mirrorSearchResults, mirrorSearchLoading, performMirrorSearch, selectedTargetsCount,
-                    searchLabel, submitActionLabel
+                    searchLabel, submitActionLabel,
+                    // NEW EXPORTS
+                    searchFilters, mirrorFilters, filteredMirrorResults, selectAllMirrorTargets, allMirrorSelected, cancelMirrorPoll
                 };
             }
         }).mount('#app');

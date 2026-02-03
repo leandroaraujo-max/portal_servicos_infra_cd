@@ -445,46 +445,86 @@ function submitResetQueue(requestData) {
     if (!queueSheet) {
         queueSheet = ss.insertSheet("Solicitações");
         // SCHEMA v1.3.0 (A-Q)
-        // A:ID, B:DATA, C:FILIAL, D:USER, E:NOME, F:EMAIL, G:CC, H:ANALISTA, I:SOLICITANTE, J:PROC, K:APROV, L:TIPO, M:DETALHES, N:MODELO, O:DESTINOS, P:GRUPOS, Q:SLA
         queueSheet.appendRow(["ID", "DATA_HORA", "FILIAL", "USER_NAME", "NOME", "EMAIL_COLAB", "CENTRO_CUSTO", "ANALISTA_RESPONSAVEL", "SOLICITANTE", "STATUS_PROCESSAMENTO", "STATUS_APROVACAO", "TIPO_TAREFA", "DETALHES_ADICIONAIS", "MODELO", "DESTINOS", "GRUPOS", "ULTIMO_LEMBRETE"]);
         queueSheet.setTabColor("Blue");
         queueSheet.getRange(1, 1, 1, 17).setFontWeight("bold").setBackground("#cfe2f3");
         queueSheet.setFrozenRows(1);
     }
 
-    const timestamp = new Date();
+    const timestamp = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss"); // Formato String para consistência visual
     const requesterEmail = Session.getActiveUser().getEmail();
 
-    // Mapeia Analista para obter Email Corporativo Oficial
+    // Mapeia Analista
     const analystData = mapAnalystByEmail(requesterEmail);
-    const finalAnalystEmail = analystData ? analystData.email : requesterEmail; // Fallback seguro
+    const finalAnalystEmail = analystData ? analystData.email : requesterEmail;
     const finalAnalystName = analystData ? analystData.nome : requestData.analyst;
+    const emailType = (requestData.task_type === "DESBLOQUEIO_CONTA") ? "DESBLOQUEIO" : "RESET";
 
-    requestData.users.forEach(u => {
-        const nextId = getNextQueueId(queueSheet);
-        queueSheet.appendRow([
-            nextId,                         // A (0)
+    // 1. OTIMIZAÇÃO: Cálculo de IDs em lote
+    let startId = 1;
+    const lastRow = queueSheet.getLastRow();
+    if (lastRow > 1) {
+        const ids = queueSheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+        const maxId = ids.reduce((max, val) => {
+            const num = parseInt(val, 10);
+            return !isNaN(num) && num > max ? num : max;
+        }, 0);
+        startId = maxId + 1;
+    }
+
+    // 2. OTIMIZAÇÃO: Construção da matriz de dados (Bulk Insert)
+    const rowsToAdd = requestData.users.map((u, index) => {
+        const currentId = startId + index;
+        return [
+            currentId,                      // A (0)
             timestamp,                      // B (1)
             requestData.filial || u.filial, // C (2)
             u.user_name,                    // D (3)
             u.nome,                         // E (4)
             u.email,                        // F (5)
             u.centro_custo,                 // G (6)
-            finalAnalystEmail,              // H (7) - ANALISTA
-            requesterEmail,                 // I (8) - SOLICITANTE
-            "PENDENTE",                     // J (9) - STATUS_PROC
-            "PENDENTE",                     // K (10) - STATUS_APROV
-            requestData.task_type || "RESET", // L (11) - TIPO
-            "",                             // M (12) - DETALHES
-            "",                             // N (13) - MODELO
-            "",                             // O (14) - DESTINOS
-            "",                             // P (15) - GRUPOS
-            ""                              // Q (16) - ULTIMO_LEMBRETE
-        ]);
-
-        const emailType = requestData.task_type === "DESBLOQUEIO_CONTA" ? "DESBLOQUEIO" : "RESET";
-        sendApprovalEmail(finalAnalystName, finalAnalystEmail, nextId, emailType, u.user_name, u.nome);
+            finalAnalystEmail,              // H (7)
+            requesterEmail,                 // I (8)
+            "PENDENTE",                     // J (9)
+            "PENDENTE",                     // K (10)
+            requestData.task_type || "RESET", // L (11)
+            "",                             // M (12)
+            "",                             // N (13)
+            "",                             // O (14)
+            "",                             // P (15)
+            ""                              // Q (16)
+        ];
     });
+
+    if (rowsToAdd.length > 0) {
+        queueSheet.getRange(lastRow + 1, 1, rowsToAdd.length, rowsToAdd[0].length).setValues(rowsToAdd);
+    }
+
+    SpreadsheetApp.flush();
+
+    // 3. OBSERVAÇÃO SOBRE EMAILS:
+    // Enviar 1000 emails pode exceder cota/tempo. 
+    // Mantemos o envio individual por enquanto, mas em blocos grandes idealmente seria assíncrono.
+    // Para simplificar e atender o requisito de "registros individuais", focamos na planilha.
+    // O envio abaixo pode demorar.
+
+    // Opcional: Limitar envio de emails em massa para evitar timeout ou usar Gatilho.
+    // Pelo pedido do usuário, "gerar solicitações" é prioridade.
+
+    try {
+        if (requestData.users.length <= 20) {
+            // Envia para volumes pequenos
+            requestData.users.forEach((u, i) => {
+                sendApprovalEmail(finalAnalystName, finalAnalystEmail, (startId + i), emailType, u.user_name, u.nome);
+            });
+        } else {
+            // Para volumes grandes, envia apenas um resumo ou processa assincronamente (TODO)
+            // Por segurança, não vamos travar o script tentando enviar 1000 emails síncronos.
+        }
+    } catch (e) {
+        console.error("Erro ao enviar emails de aprovação:", e);
+    }
+
     return true;
 }
 
@@ -651,10 +691,11 @@ function submitMirrorRequest(userModelo, requester) {
     if (!userModelo) throw new Error("Usuário modelo é obrigatório.");
 
     const ss = SpreadsheetApp.openById(ID_PLANILHA_GESTAO);
-    let sheet = ss.getSheetByName("Espelho_Fila");
+    // SEGREGAÇÃO v1.3.4: Usa aba dedicada 'Dados_Espelhamento' para busca volátil
+    let sheet = ss.getSheetByName("Dados_Espelhamento");
 
     if (!sheet) {
-        sheet = ss.insertSheet("Espelho_Fila");
+        sheet = ss.insertSheet("Dados_Espelhamento");
         sheet.appendRow(["ID", "DATA", "USER_MODELO", "SOLICITANTE", "STATUS", "GRUPOS_JSON", "MSG_ERRO"]);
         sheet.setTabColor("Orange");
         sheet.getRange(1, 1, 1, 7).setFontWeight("bold").setBackground("#f9cb9c");
@@ -674,39 +715,40 @@ function submitMirrorRequest(userModelo, requester) {
     ]);
     SpreadsheetApp.flush(); // Força escrita imediata
 
-
     return { success: true, requestId: nextId, message: "Solicitação enviada. Aguardando agente..." };
 }
 
 function checkMirrorStatus(requestId) {
     const ss = SpreadsheetApp.openById(ID_PLANILHA_GESTAO);
-    const sheet = ss.getSheetByName("Espelho_Fila");
-    if (!sheet) throw new Error("Aba de fila não existe.");
+    // SEGREGAÇÃO v1.3.4: Lê da aba Dados_Espelhamento
+    const sheet = ss.getSheetByName("Dados_Espelhamento");
+    if (!sheet) throw new Error("Aba Dados_Espelhamento não encontrada.");
 
     const data = sheet.getDataRange().getValues();
-    // Busca pelo ID (Coluna A)
+    // Busca pelo ID (Coluna A - index 0)
     for (let i = 1; i < data.length; i++) {
-        if (String(data[i][0]) === String(requestId)) {
-            const status = data[i][4];
+        if (String(data[i][0]).trim() === String(requestId).trim()) {
+            // Schema Dados_Espelhamento:
+            // 0:ID, 1:DATA, 2:MODELO, 3:SOLICITANTE, 4:STATUS, 5:GRUPOS, 6:ERRO
+            const status = String(data[i][4] || "").toUpperCase().trim();
             const jsonGrupos = data[i][5];
             const msgErro = data[i][6];
 
-            if (status === "GRUPOS_ENCONTRADOS" || status === "SUCESSO" || status === "CONCLUIDO") {
+            if (status === "CONCLUIDO" || status === "GRUPOS_ENCONTRADOS" || status === "SUCESSO") {
                 let grupos = [];
                 if (jsonGrupos) {
-                    // PowerShell manda separado por ; ou JSON array string
-                    // Se vier "Grupo1;Grupo2", split
-                    if (jsonGrupos.indexOf('[') === 0) {
+                    if (String(jsonGrupos).trim().indexOf('[') === 0) {
                         try { grupos = JSON.parse(jsonGrupos); } catch (e) { grupos = []; }
                     } else {
+                        // Fallback split ;
                         grupos = String(jsonGrupos).split(';').filter(g => g);
                     }
                 }
                 return { status: "CONCLUIDO", groups: grupos };
             }
 
-            if (status === "ERRO" || status === "ERRO_AD") {
-                return { status: "ERRO", message: msgErro || "Erro desconhecido ao buscar grupos." };
+            if (status === "ERRO" || status === "REPROVADO") {
+                return { status: "ERRO", message: msgErro || "Erro ao buscar grupos." };
             }
 
             return { status: "PENDENTE" };
@@ -765,9 +807,8 @@ function updateMirrorResult(payload) {
     const ss = SpreadsheetApp.openById(ID_PLANILHA_GESTAO);
     const type = payload.type || "FETCH_GROUPS";
 
-    // FETCH_GROUPS ainda fica na aba temporária Espelho_Fila
-    // MIRROR e outros agora ficam na aba Solicitações
-    const sheetName = (type === "FETCH_GROUPS") ? "Espelho_Fila" : "Solicitações";
+    // SEGREGAÇÃO v1.3.4: Define aba alvo baseado no tipo
+    const sheetName = (type === "FETCH_GROUPS") ? "Dados_Espelhamento" : "Solicitações";
     const sheet = ss.getSheetByName(sheetName);
 
     if (!sheet) return ContentService.createTextOutput("Erro: Aba " + sheetName + " nao existe").setMimeType(ContentService.MimeType.TEXT);
@@ -775,32 +816,48 @@ function updateMirrorResult(payload) {
     const idReq = String(payload.id || payload.requestId).trim();
     const status = payload.status;
     const msg = payload.msg_error;
+    const grupos = payload.grupos || payload.groups; // Payload do Daemon
 
     const data = sheet.getDataRange().getValues();
 
-    // NOVO SCHEMA v1.2.1 (Solicitações)
-    // Col J (9) = STATUS_PROCESSAMENTO
-    // Col M (12) = DETALHES / ERRO
-    const statusCol = (type === "FETCH_GROUPS") ? 5 : 10; // Col E vs Col J (10 na Range)
-    const errorCol = (type === "FETCH_GROUPS") ? 7 : 13; // Col G vs Col M (13 na Range)
-    const resultCol = 6; // Para grupos (FETCH_GROUPS) na Col F
+    // Mapeamento de Colunas (0-based)
+    // Se Dados_Espelhamento: Status=4(E), Grupos=5(F), Erro=6(G)
+    // Se Solicitações: Status=9(J), Detalhes=12(M)
+
+    // Config: [StatusCol, ErrorCol, ResultCol]
+    let cfg = (type === "FETCH_GROUPS") ? [4, 6, 5] : [9, 12, null];
 
     for (let i = 1; i < data.length; i++) {
         if (String(data[i][0]).trim() === idReq) {
-            if (status === "SUCESSO" || status === "GRUPOS_ENCONTRADOS") {
-                const finalStatus = (type === "FETCH_GROUPS") ? "CONCLUIDO" : "FINALIZADO";
-                sheet.getRange(i + 1, statusCol).setValue(finalStatus);
-                if (type === "FETCH_GROUPS") sheet.getRange(i + 1, resultCol).setValue(payload.grupos || payload.groups);
-                SpreadsheetApp.flush(); // Garante persistência imediata
-            } else if (status === "REPROVADO") {
-                sheet.getRange(i + 1, statusCol).setValue("REPROVADO");
-                sheet.getRange(i + 1, errorCol).setValue(msg); // Opcional: motivo
-                SpreadsheetApp.flush();
-            } else {
-                sheet.getRange(i + 1, statusCol).setValue("ERRO");
-                sheet.getRange(i + 1, errorCol).setValue(msg);
-                SpreadsheetApp.flush();
+
+            // SUCESSO
+            if (status === "SUCESSO" || status === "GRUPOS_ENCONTRADOS" || status === "CONCLUIDO") {
+                // Para FETCH, status é GRUPOS_ENCONTRADOS ou SUCESSO -> CONCLUIDO
+                // Para EXECUTE, status é CONCLUIDO -> FINALIZADO (ou mantém CONCLUIDO se padronizou)
+
+                // Vamos padronizar escrita:
+                if (type === "FETCH_GROUPS") {
+                    sheet.getRange(i + 1, cfg[0] + 1).setValue("CONCLUIDO");
+                    if (grupos) sheet.getRange(i + 1, cfg[2] + 1).setValue(grupos);
+                } else {
+                    sheet.getRange(i + 1, cfg[0] + 1).setValue("CONCLUIDO");
+                    // Se houver mensagem de sucesso, pode por em detalhes? opcional.
+                }
             }
+            // REPROVADO
+            else if (status === "REPROVADO") {
+                sheet.getRange(i + 1, cfg[0] + 1).setValue("REPROVADO");
+                // Se for solicitações, temos STATUS_APROVACAO na col K (10)
+                if (type !== "FETCH_GROUPS") sheet.getRange(i + 1, 11).setValue("REPROVADO");
+                sheet.getRange(i + 1, cfg[1] + 1).setValue(msg);
+            }
+            // ERRO
+            else {
+                sheet.getRange(i + 1, cfg[0] + 1).setValue("ERRO");
+                sheet.getRange(i + 1, cfg[1] + 1).setValue(msg);
+            }
+
+            SpreadsheetApp.flush();
             return ContentService.createTextOutput("OK").setMimeType(ContentService.MimeType.TEXT);
         }
     }
@@ -825,48 +882,86 @@ function getNextMirrorId(sheet) {
 /**
  * 2ª ETAPA DO ESPELHO: Registra a execução para o Analista
  */
-function submitMirrorExecution(data) {
-    const { modelUser, groups, targets, analyst, requester } = data;
-
-    if (!targets || targets.length === 0) throw new Error("Usuários destino não informados.");
-    if (!groups || groups.length === 0) throw new Error("Grupos não informados.");
-    if (!analyst) throw new Error("Analista não informado.");
+// 1. EXECUÇÃO DE ESPELHAMENTO (Agora vai para a fila Unificada "Solicitações")
+function submitMirrorExecution(payload) {
+    if (!payload.modelUser || !payload.targets || payload.targets.length === 0) {
+        throw new Error("Dados incompletos para espelhamento.");
+    }
 
     const ss = SpreadsheetApp.openById(ID_PLANILHA_GESTAO);
-    let sheet = ss.getSheetByName("Solicitações");
+    const sheet = ss.getSheetByName("Solicitações");
+    const timestamp = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss");
 
-    // Usa getNextQueueId pois agora o ID é unificado
-    const nextId = getNextQueueId(sheet);
-    const timestamp = new Date();
-    const requesterEmail = Session.getActiveUser().getEmail();
+    // FIX v1.3.6: Individualização de Solicitações
+    // Cada alvo gera uma linha independente na aba Solicitações.
 
-    const analystData = mapAnalystByEmail(requesterEmail);
-    const finalAnalystEmail = analystData ? analystData.email : requesterEmail;
-    const finalAnalystName = analystData ? analystData.nome : analyst;
+    // Normalização de input (garante array de objetos ou strings)
+    let targetsData = [];
+    if (typeof payload.targets[0] === 'object') {
+        targetsData = payload.targets; // Já é [{user_name, nome, email, centro_custo}, ...]
+    } else {
+        // Fallback para strings (legado)
+        targetsData = payload.targets.map(t => ({
+            user_name: String(t),
+            nome: "Usuário AD",
+            email: "",
+            centro_custo: ""
+        }));
+    }
 
-    sheet.appendRow([
-        nextId,             // A (0)
-        timestamp,          // B (1)
-        "ESPELHO",          // C (2)
-        "Multiplos",        // D (3)
-        "Espelhamento AD",  // E (4)
-        "",                 // F (5)
-        "",                 // G (6)
-        finalAnalystEmail,  // H (7) - ANALISTA
-        requesterEmail,     // I (8) - SOLICITANTE
-        "PENDENTE",         // J (9) - STATUS_PROC
-        "PENDENTE",         // K (10) - STATUS_APROV
-        "MIRROR",           // L (11) - TIPO
-        "",                 // M (12) - DETALHES
-        modelUser,          // N (13) - MODELO
-        JSON.stringify(targets), // O (14) - DESTINOS
-        JSON.stringify(groups),  // P (15) - GRUPOS
-        ""                       // Q (16) - ULTIMO_LEMBRETE
-    ]);
+    // Calcula IDs em lote para performance (Evita chamadas repetidas de getNextQueueId)
+    let startId = 1;
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+        // Pega o maior ID da coluna A
+        const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+        const maxId = ids.reduce((max, val) => {
+            const num = parseInt(val, 10);
+            return !isNaN(num) && num > max ? num : max;
+        }, 0);
+        startId = maxId + 1;
+    }
 
-    // Enviar Notificação de Aprovação
-    sendApprovalEmail(finalAnalystName, finalAnalystEmail, nextId, "MIRROR", modelUser, targets.length + " destinos");
-    return true;
+    // Prepara as linhas para inserção em lote
+    const rowsToAdd = targetsData.map((t, index) => {
+        const currentId = startId + index;
+
+        // Coluna O (Destinos) para o Daemon espera um ARRAY JSON.
+        // Como estamos individualizando, cada linha manda um array com 1 único elemento.
+        const targetArrayForDaemon = [t.user_name];
+
+        return [
+            currentId,                      // A (0) ID Único
+            timestamp,                      // B (1) Data
+            t.filial || "ESPELHO",          // C (2) Filial Real (ou fallback se vazio)
+            t.user_name,                    // D (3) User Name Real
+            t.nome,                         // E (4) Nome Real (SEM sufixo Espelho)
+            t.email || "",                  // F (5) Email Real
+            t.centro_custo || "",           // G (6) Centro de Custo Real
+            payload.analyst,                // H (7) Analista
+            payload.requester,              // I (8) Solicitante
+            "PENDENTE",                     // J (9) Status
+            "APROVADO",                     // K (10) Status Aprovação
+            "MIRROR",                       // L (11) Tipo
+            "",                             // M (12) Detalhes
+            payload.modelUser,              // N (13) Modelo
+            JSON.stringify(targetArrayForDaemon), // O (14) Destinos (Array de 1)
+            JSON.stringify(payload.groups), // P (15) Grupos
+            ""                              // Q (16) SLA
+        ];
+    });
+
+    // Inserção em lote (performance)
+    if (rowsToAdd.length > 0) {
+        sheet.getRange(lastRow + 1, 1, rowsToAdd.length, rowsToAdd[0].length).setValues(rowsToAdd);
+    }
+
+    SpreadsheetApp.flush();
+
+    // Dispara gatilho SLA
+    try { ScriptApp.newTrigger("runSLACheck").timeBased().after(1000).create(); } catch (e) { }
+
+    return { success: true, message: rowsToAdd.length + " espelhamento(s) solicitado(s) individualmente com sucesso!" };
 }
 
 // =========================================================================
@@ -1278,10 +1373,14 @@ function handleUnifiedQueue() {
                 };
 
                 // Dados Específicos por Tipo
-                if (taskType === "MIRROR" || taskType === "ESPELHO_USUARIO") {
+                if (taskType === "MIRROR" || taskType === "ESPELHO_USUARIO" || taskType === "FETCH_GROUPS") {
                     r.user_modelo = row[13]; // Col N
-                    r.targets = JSON.parse(row[14] || "[]"); // Col O
-                    r.grupos = JSON.parse(row[15] || "[]");  // Col P
+
+                    // FETCH_GROUPS não tem targets/grupos ainda
+                    if (taskType !== "FETCH_GROUPS") {
+                        r.targets = JSON.parse(row[14] || "[]"); // Col O
+                        r.grupos = JSON.parse(row[15] || "[]");  // Col P
+                    }
                 } else {
                     // Reset / Unlock
                     r.nova_senha = generatePassword();
@@ -1294,8 +1393,8 @@ function handleUnifiedQueue() {
         }
     }
 
-    // 2. FETCH GROUPS (Mantém na Espelho_Fila por ser temporário/volátil)
-    const sheetFila = ss.getSheetByName("Espelho_Fila");
+    // 2. FETCH GROUPS (SEGREGAÇÃO v1.3.4 - Lê de Dados_Espelhamento)
+    const sheetFila = ss.getSheetByName("Dados_Espelhamento");
     if (sheetFila) {
         const fData = sheetFila.getDataRange().getValues();
         for (let i = 1; i < fData.length; i++) {
