@@ -1,5 +1,5 @@
 # ==============================================================================
-# IDENTITY MANAGER - SUPORTE INFRA CDS - v5.5 (BITLOCKER RESILIENCE FIX)
+# IDENTITY MANAGER - SUPORTE INFRA CDS - v5.7 (BITLOCKER RDN SEARCH FIX)
 # ==============================================================================
 
 # --- CONFIGURAÇÃO ---
@@ -146,17 +146,23 @@ function Invoke-TaskExecution {
                 $hostnameResolved = $user
 
                 if ($prefix) {
-                    Write-Log "Busca GLOBAL AD BitLocker (v5.5 - Resiliência) por ID: $prefix" "INFO"
-                    # v5.5: Filtro resiliente via Where-Object. 
-                    # Evitamos o erro 'Properties are invalid' do provedor AD em buscas parciais de GUID.
-                    $recovery = Get-ADObject -Filter "objectClass -eq 'msFVE-RecoveryInformation'" -Properties msFVE-RecoveryPassword, msFVE-RecoveryPasswordID | 
-                        Where-Object { $_."msFVE-RecoveryPasswordID" -like "*$prefix*" } | Select-Object -First 1
+                    Write-Log "Busca GLOBAL BitLocker (v5.7 - RDN Filter) por ID: $prefix" "INFO"
+                    # v5.7: Abordagem à prova de falhas. 
+                    # O ID (GUID) faz parte do DistinguishedName/Name do objeto msFVE-RecoveryInformation.
+                    # Buscamos todos os objetos da classe e filtramos pelo nome para evitar erro de atributos.
+                    $recovery = Get-ADObject -Filter "objectClass -eq 'msFVE-RecoveryInformation'" -Properties msFVE-RecoveryPassword | 
+                        Where-Object { $_.DistinguishedName -like "*$prefix*" -or $_.Name -like "*$prefix*" } | Select-Object -First 1
                     
                     if ($recovery) {
-                        $parentDN = $recovery.DistinguishedName -replace '^CN=[^,]+,',''
-                        $compParent = Get-ADComputer -Identity $parentDN -ErrorAction SilentlyContinue
-                        if ($compParent) { $hostnameResolved = $compParent.Name }
-                        Write-Log "Chave localizada (ID: $prefix). Hostname: $hostnameResolved" "SUCCESS"
+                        # Extrai o Hostname do DN (o pai do objeto de recuperação é o computador)
+                        if ($recovery.DistinguishedName -match "CN=([^,]+),CN=([^,]+),") {
+                            $hostnameResolved = $matches[2] # Pega o CN do pai
+                        } else {
+                            $parentDN = $recovery.DistinguishedName -replace '^CN=[^,]+,',''
+                            $compParent = Get-ADComputer -Identity $parentDN -ErrorAction SilentlyContinue
+                            if ($compParent) { $hostnameResolved = $compParent.Name }
+                        }
+                        Write-Log "Chave localizada no DN (ID: $prefix). Hostname: $hostnameResolved" "SUCCESS"
                     }
                 }
 
@@ -164,7 +170,7 @@ function Invoke-TaskExecution {
                     Write-Log "Fallback: Buscando computador por Hostname: $user" "INFO"
                     $comp = Get-ADComputer -Filter "Name -eq '$user'" -ErrorAction SilentlyContinue
                     if ($comp) {
-                        $allRecoveries = Get-ADObject -Filter "objectClass -eq 'msFVE-RecoveryInformation'" -SearchBase $comp.DistinguishedName -Properties msFVE-RecoveryPassword, msFVE-RecoveryPasswordID
+                        $allRecoveries = Get-ADObject -Filter "objectClass -eq 'msFVE-RecoveryInformation'" -SearchBase $comp.DistinguishedName -Properties msFVE-RecoveryPassword
                         $recovery = $allRecoveries | Sort-Object whenCreated -Descending | Select-Object -First 1
                         $hostnameResolved = $comp.Name
                     }
@@ -172,7 +178,8 @@ function Invoke-TaskExecution {
 
                 if ($recovery) {
                     $realKey = $recovery."msFVE-RecoveryPassword"
-                    $fullId = $recovery."msFVE-RecoveryPasswordID"
+                    # Tenta extrair o ID Full do Name ou DN
+                    $fullId = if ($recovery.Name -match "{([A-F0-9-]+)}") { $matches[1] } else { $recovery.Name }
                     
                     Send-BitlockerEmail -Para $analista -Hostname $hostnameResolved -RecoveryKey $realKey -KeyId $fullId -ReqId $id
                     
@@ -213,7 +220,7 @@ function Invoke-TaskExecution {
 }
 
 # --- LOOP PRINCIPAL ---
-Write-Log "Daemon v5.5 ATIVO - Estrutura Resiliente + Search Fix" "SUCCESS"
+Write-Log "Daemon v5.7 ATIVO - RDN Search Mode" "SUCCESS"
 
 while ($true) {
     try {
