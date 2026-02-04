@@ -1,5 +1,5 @@
 # ==============================================================================
-# GERENCIAMENTO DE USUÁRIOS - SUPORTE INFRA CDS - v4.7 (UNIFICADO & ROBUSTO)
+# IDENTITY MANAGER - SUPORTE INFRA CDS - v5.1 (PRODUÇÃO RESILIENTE)
 # ==============================================================================
 
 # --- CONFIGURAÇÃO ---
@@ -12,8 +12,10 @@ $global:smtpServer = "smtpml.magazineluiza.intranet"
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Force -Path $LogDir | Out-Null }
 $LogFile = Join-Path $LogDir "UnifiedDaemon_$(Get-Date -Format 'yyyy-MM-dd').log"
 
-# Importa módulos necessários
-if (Get-Module -ListAvailable -Name ActiveDirectory) { Import-Module ActiveDirectory -ErrorAction SilentlyContinue }
+# Garante o módulo de AD
+if (-not (Get-Module -Name ActiveDirectory)) {
+    Import-Module ActiveDirectory -ErrorAction SilentlyContinue
+}
 
 function Write-Log {
     param([string]$Message, [string]$Level = "INFO")
@@ -21,10 +23,10 @@ function Write-Log {
     $logEntry = "[$timestamp] [$Level] $Message"
     $color = switch ($Level) { "INFO"{"Cyan"} "WARN"{"Yellow"} "ERROR"{"Red"} "SUCCESS"{"Green"} default{"Gray"} }
     Write-Host $logEntry -ForegroundColor $color
-    Add-Content -Path $LogFile -Value $logEntry -ErrorAction SilentlyContinue
+    $logEntry | Out-File -FilePath $LogFile -Append -Encoding UTF8
 }
 
-# --- FUNÇÕES DE EMAIL ---
+# --- FUNÇÕES DE EMAIL (ESTILIZADAS MAGALU) ---
 
 function Send-ResetEmail {
     param($Para, $CC, $Usuario, $NomeColaborador, $NovaSenha, $FromEmail)
@@ -49,7 +51,7 @@ function Send-ResetEmail {
         $smtp = New-Object System.Net.Mail.SmtpClient($global:smtpServer, 25)
         $smtp.Send($msg)
         return $true
-    } catch { Write-Log "Erro envio email reset: $_" "ERROR"; return $false }
+    } catch { Write-Log "Erro SMTP Reset: $($_.Exception.Message)" "ERROR"; return $false }
 }
 
 function Send-BitlockerEmail {
@@ -94,64 +96,59 @@ function Send-BitlockerEmail {
         $msg.IsBodyHtml = $true
         $smtp = New-Object System.Net.Mail.SmtpClient($global:smtpServer, 25)
         $smtp.Send($msg)
-    } catch { Write-Log "Erro envio email bitlocker: $_" "ERROR" }
+        return $true
+    } catch { Write-Log "Erro SMTP BitLocker: $($_.Exception.Message)" "ERROR"; return $false }
 }
 
-# --- PROCESSAMENTO DE TAREFAS ---
+# --- PROCESSAMENTO ---
 
 function Invoke-TaskExecution {
     param($Task)
     
-    # Normalização robusta de nomes de campos (Mapeamento flexível)
-    $id = if ($Task.id_solicitacao) { $Task.id_solicitacao } else { $Task.ID }
-    $user = if ($Task.user_name) { $Task.user_name } else { $Task.USER_NAME }
-    $type = if ($Task.task_type) { $Task.task_type } else { $Task.TIPO_TAREFA }
-    $pwd = if ($Task.nova_senha) { $Task.nova_senha } else { $Task.NOVA_SENHA }
-    $nome = if ($Task.nome) { $Task.nome } else { $Task.NOME_COLABORADOR }
-    $emailColab = if ($Task.email_colaborador) { $Task.email_colaborador } else { $Task.EMAIL_COLABORADOR }
-    $emailGestor = if ($Task.email_gestor) { $Task.email_gestor } else { $Task.EMAIL_GESTOR }
-    $analista = if ($Task.analista) { $Task.analista } else { $Task.ANALISTA_EMAIL }
+    # Mapeamento Dinâmico v5.1 (Resiliência Máxima)
+    $id = ($Task.id_solicitacao, $Task.id, $Task.ID | Where-Object {$_})[0]
+    $user = ($Task.user_name, $Task.USER_NAME, $Task.usuario | Where-Object {$_})[0]
+    $type = ($Task.task_type, $Task.TIPO_TAREFA, $Task.type | Where-Object {$_})[0]
+    $pwd  = ($Task.nova_senha, $Task.NOVA_SENHA, $Task.senha | Where-Object {$_})[0]
+    $nome = ($Task.nome, $Task.NOME_COLABORADOR, $Task.NOME | Where-Object {$_})[0]
+    $emailColab = ($Task.email_colaborador, $Task.EMAIL_COLABORADOR, $Task.email_colab | Where-Object {$_})[0]
+    $emailGestor = ($Task.email_gestor, $Task.EMAIL_GESTOR | Where-Object {$_})[0]
+    $analista = ($Task.analista, $Task.ANALISTA_EMAIL, $Task.solicitante | Where-Object {$_})[0]
+    $prefix = $Task.password_id_prefix
 
     if (-not $id) { return }
 
     try {
-        Write-Log "Processando ID #$id ($type) para: $user" "INFO"
+        Write-Log "Executando Tarefa ID #$id ($type) para $user" "INFO"
+        $payload = @{ action="report_status"; id=$id; status="ERRO"; message="Iniciado" }
 
         switch ($type) {
             "RESET" {
-                if (-not $pwd) { throw "Senha não fornecida pela API" }
+                if (-not $pwd) { throw "Senha ausente para Reset." }
                 $securePwd = ConvertTo-SecureString $pwd -AsPlainText -Force
                 Set-ADAccountPassword -Identity $user -NewPassword $securePwd -Reset -ErrorAction Stop
                 Unlock-ADAccount -Identity $user -ErrorAction Stop
                 Set-ADUser -Identity $user -ChangePasswordAtLogon $true -ErrorAction Stop
                 
-                # Envio de E-mail (Se houver dados)
+                $msgFinal = "Reset executado."
                 if ($emailColab) {
-                    Send-ResetEmail -Para $emailColab -CC $emailGestor -Usuario $user -NomeColaborador $nome -NovaSenha $pwd -FromEmail $analista
-                    $msgFinal = "Reset executado e e-mail enviado."
-                } else {
-                    $msgFinal = "Reset executado (E-mail não enviado - destinatário ausente)."
+                    if (Send-ResetEmail -Para $emailColab -CC $emailGestor -Usuario $user -NomeColaborador $nome -NovaSenha $pwd -FromEmail $analista) {
+                        $msgFinal += " E-mail enviado para o colaborador."
+                    }
                 }
-                $payload = @{ action="report_status"; id=$id; status="CONCLUIDO"; message=$msgFinal }
+                $payload.status = "CONCLUIDO"; $payload.message = $msgFinal
             }
-            "DESBLOQUEIO_CONTA" {
-                Unlock-ADAccount -Identity $user -ErrorAction Stop
-                $payload = @{ action="report_status"; id=$id; status="CONCLUIDO"; message="Conta desbloqueada com sucesso." }
-            }
+
             "BITLOCKER" {
-                # v1.5.5: Busca Inteligente (Global por ID ou Local por Hostname)
-                $prefix = $req.password_id_prefix
+                # v1.5.6: Busca Inteligente (Global por ID ou Local por Hostname)
                 $recovery = $null
                 $hostnameResolved = $user
 
                 if ($prefix) {
-                    Write-Log "Iniciando busca GLOBAL BitLocker por ID: $prefix"
-                    # v1.5.6: Filtro LDAP resiliente (igual ao dsa.msc). 
-                    # Usamos '*' no início e fim para garantir o match independente de '{' no esquema.
+                    Write-Log "Busca GLOBAL AD BitLocker (dsa.msc style) por ID: $prefix" "INFO"
                     $recovery = Get-ADObject -Filter "objectClass -eq 'msFVE-RecoveryInformation' -and msFVE-RecoveryPasswordID -like '*$prefix*'" -Properties msFVE-RecoveryPassword, msFVE-RecoveryPasswordID | Select-Object -First 1
                     
                     if ($recovery) {
-                        # Extrai o nome do computador do DN do objeto pai
                         $parentDN = $recovery.DistinguishedName -replace '^CN=[^,]+,',''
                         $compParent = Get-ADComputer -Identity $parentDN -ErrorAction SilentlyContinue
                         if ($compParent) { $hostnameResolved = $compParent.Name }
@@ -159,100 +156,80 @@ function Invoke-TaskExecution {
                     }
                 }
 
-                # Fallback ou Busca por Hostname se não encontrou por ID ou ID não foi fornecido
                 if (-not $recovery) {
-                    Write-Log "Buscando computador por Hostname: $user"
+                    Write-Log "Fallback: Buscando computador por Hostname: $user" "INFO"
                     $comp = Get-ADComputer -Filter "Name -eq '$user'" -ErrorAction SilentlyContinue
-                    if (-not $comp) {
-                        if ($analista) { Send-BitlockerEmail -Para $analista -Hostname $user -RecoveryKey "NOT_FOUND" -ReqId $id }
-                        throw "Computador/ID '$user' não encontrado no AD."
-                    }
-
-                    Write-Log "Buscando chaves BitLocker na estação: $($comp.Name)"
-                    $allRecoveries = Get-ADObject -Filter "objectClass -eq 'msFVE-RecoveryInformation'" -SearchBase $comp.DistinguishedName -Properties msFVE-RecoveryPassword, msFVE-RecoveryPasswordID
-                    
-                    if ($prefix) {
-                        # Filtra pelo prefixo dentro da máquina específica (caso a busca global tenha falhado ou retornado múltiplos)
-                        $recovery = $allRecoveries | Where-Object { 
-                            $cleanId = $_."msFVE-RecoveryPasswordID".Replace("{", "").Replace("}", "")
-                            $cleanId.StartsWith($prefix) 
-                        } | Sort-Object whenCreated -Descending | Select-Object -First 1
-                    } else {
-                        # Sem prefixo, usamos a chave mais recente vinculada à máquina
+                    if ($comp) {
+                        $allRecoveries = Get-ADObject -Filter "objectClass -eq 'msFVE-RecoveryInformation'" -SearchBase $comp.DistinguishedName -Properties msFVE-RecoveryPassword, msFVE-RecoveryPasswordID
                         $recovery = $allRecoveries | Sort-Object whenCreated -Descending | Select-Object -First 1
+                        $hostnameResolved = $comp.Name
                     }
-                    $hostnameResolved = $comp.Name
                 }
 
-                if (-not $recovery) {
-                    if ($analista) { Send-BitlockerEmail -Para $analista -Hostname $hostnameResolved -RecoveryKey "NOT_FOUND" -ReqId $id }
-                    throw "Nenhuma chave BitLocker encontrada para '$hostnameResolved' (Filtro ID: $prefix)."
-                }
-                
-                $realKey = $recovery."msFVE-RecoveryPassword"
-                $fullId = $recovery."msFVE-RecoveryPasswordID"
-
-                if ($analista) {
+                if ($recovery) {
+                    $realKey = $recovery."msFVE-RecoveryPassword"
+                    $fullId = $recovery."msFVE-RecoveryPasswordID"
+                    
                     Send-BitlockerEmail -Para $analista -Hostname $hostnameResolved -RecoveryKey $realKey -KeyId $fullId -ReqId $id
-                }
-                
-                $payload = @{ 
-                    action = "update_bitlocker_result"
-                    id = $id
-                    status = "SUCESSO"
-                    recoveryKey = $realKey
-                    recoveryKeyId = $fullId
-                    hostname = $hostnameResolved
+                    
+                    $payload = @{ 
+                        action = "update_bitlocker_result"
+                        id = $id
+                        status = "SUCESSO"
+                        recoveryKey = $realKey
+                        recoveryKeyId = $fullId
+                        hostname = $hostnameResolved
+                    }
+                } else {
+                    if ($analista) { Send-BitlockerEmail -Para $analista -Hostname $hostnameResolved -RecoveryKey "NOT_FOUND" -ReqId $id }
+                    throw "Chave não localizada no AD para $hostnameResolved."
                 }
             }
+
+            "DESBLOQUEIO_CONTA" {
+                Unlock-ADAccount -Identity $user -ErrorAction Stop
+                $payload.status = "CONCLUIDO"; $payload.message = "Conta desbloqueada com sucesso."
+            }
+            
             default {
-                Write-Log "Tipo de tarefa não suportado: $type" "WARN"
-                return
+                throw "Tipo de tarefa não suportado: $type"
             }
         }
 
-        # Notifica Sucesso
+        # Update Final
         Invoke-RestMethod -Uri $API_URL -Method Post -Body (ConvertTo-Json $payload) -ContentType "application/json"
-        Write-Log "ID #$id finalizado e reportado." "SUCCESS"
+        Write-Log "ID #$id OK!" "SUCCESS"
+
     } catch {
-        Write-Log "FALHA no ID #${id}: $($_.Exception.Message)" "ERROR"
-        $payload = @{ action="report_status"; id=$id; status="ERRO"; message=$_.Exception.Message }
-        Invoke-RestMethod -Uri $API_URL -Method Post -Body (ConvertTo-Json $payload) -ContentType "application/json"
+        Write-Log "FALHA ID #$id : $($_.Exception.Message)" "ERROR"
+        $errPayload = @{ action="report_status"; id=$id; status="ERRO"; message=$_.Exception.Message }
+        Invoke-RestMethod -Uri $API_URL -Method Post -Body (ConvertTo-Json $errPayload) -ContentType "application/json"
     }
 }
 
 # --- LOOP PRINCIPAL ---
-
-Write-Log "Daemon v4.7 Iniciado - Unificado & Robusto (Varredura 5s)" "SUCCESS"
+Write-Log "Daemon v5.1 ATIVO - Estrutura Resiliente + Features v1.5.6" "SUCCESS"
 
 while ($true) {
     try {
-        # Busca a fila (Trata sempre como Array)
         $response = Invoke-RestMethod -Uri "$API_URL`?mode=get_daemon_queue" -Method Get -ErrorAction Stop
-        $tasks = @($response) | Where-Object { $_.id_solicitacao -or $_.ID }
-
-        if ($tasks.Count -gt 0) {
-            Write-Log "Varredura: $($tasks.Count) solicitações reais encontradas." "WARN"
-            
-            foreach ($task in $tasks) {
-                # Se na planilha estiver REPROVADO, apenas limpa
-                if ($task.status_aprovacao -eq "REPROVADO") {
-                    $id = if ($task.id_solicitacao) { $task.id_solicitacao } else { $task.ID }
-                    Write-Log "Limpando ID #$id (Reprovado manualmente)." "WARN"
-                    $p = @{ action="report_status"; id=$id; status="REPROVADO" }
-                    Invoke-RestMethod -Uri $API_URL -Method Post -Body (ConvertTo-Json $p) -ContentType "application/json"
-                    continue
-                }
-
-                # EXECUTA TAREFA
-                Invoke-TaskExecution -Task $task
-                Start-Sleep -Milliseconds 300
+        $tasks = @($response) | Where-Object { $_.ID -or $_.id_solicitacao }
+        
+        foreach ($t in $tasks) { 
+            # Tratamento para tarefas REPROVADAS manualmente na guia
+            if ($t.status_aprovacao -eq "REPROVADO") {
+                $rid = ($t.id_solicitacao, $t.id, $t.ID | Where-Object {$_})[0]
+                Write-Log "Limpando ID #$rid (Status: REPROVADO)" "WARN"
+                $p = @{ action="report_status"; id=$rid; status="REPROVADO" }
+                Invoke-RestMethod -Uri $API_URL -Method Post -Body (ConvertTo-Json $p) -ContentType "application/json"
+                continue
             }
+            
+            Invoke-TaskExecution -Task $t
+            Start-Sleep -Milliseconds 500 
         }
+    } catch { 
+        Write-Log "Erro API/Conexão: $($_.Exception.Message)" "ERROR" 
     }
-    catch {
-        Write-Log "Erro de conexão ou processamento: $_" "ERROR"
-    }
-
     Start-Sleep -Seconds $LoopIntervalSeconds
 }

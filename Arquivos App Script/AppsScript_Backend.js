@@ -1,4 +1,4 @@
-// --- VERSÃO API: 1.5.6 (BitLocker Global Search Match) ---
+// --- VERSÃO API: 1.5.7 (Daemon v5.1 Merge & Resilience) ---
 const PROJECT_ID_API = 'maga-bigdata';
 
 // ÚNICA PLANILHA DE GESTÃO
