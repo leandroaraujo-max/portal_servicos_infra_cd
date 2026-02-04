@@ -1,5 +1,5 @@
 # ==============================================================================
-# IDENTITY MANAGER - SUPORTE INFRA CDS - v5.3 (BITLOCKER FILIAL & SEARCH FIX)
+# IDENTITY MANAGER - SUPORTE INFRA CDS - v5.4 (BITLOCKER LDAP FIX)
 # ==============================================================================
 
 # --- CONFIGURAÇÃO ---
@@ -146,22 +146,17 @@ function Invoke-TaskExecution {
                 $hostnameResolved = $user
 
                 if ($prefix) {
-                    Write-Log "Busca GLOBAL AD BitLocker (dsa.msc style) por ID: $prefix" "INFO"
-                    # v5.3: Ajuste de Filtro LDAP para evitar 'Properties are invalid'
-                    # Removemos o wildcard inicial '*' que pode causar erro no provedor AD dependendo da versão.
-                    # Como o ID no AD quase sempre começa com '{', usamos '{$prefix*'
-                    $recovery = Get-ADObject -Filter "objectClass -eq 'msFVE-RecoveryInformation' -and msFVE-RecoveryPasswordID -like '{$prefix*'" -Properties msFVE-RecoveryPassword, msFVE-RecoveryPasswordID | Select-Object -First 1
+                    Write-Log "Busca GLOBAL AD BitLocker (LDAP/dsa.msc style) por ID: $prefix" "INFO"
+                    # v5.4: Uso de -LDAPFilter (Sintaxe pura do AD). 
+                    # O ID no AD é armazenado como string '{GUID}'. Buscamos por '{$prefix*'
+                    $ldapQuery = "(msFVE-RecoveryPasswordID={$prefix*})"
+                    $recovery = Get-ADObject -LDAPFilter $ldapQuery -Properties msFVE-RecoveryPassword, msFVE-RecoveryPasswordID | Select-Object -First 1
                     
-                    if (-not $recovery) {
-                        # Tenta sem a chave '{' apenas por redundância
-                        $recovery = Get-ADObject -Filter "objectClass -eq 'msFVE-RecoveryInformation' -and msFVE-RecoveryPasswordID -like '$prefix*'" -Properties msFVE-RecoveryPassword, msFVE-RecoveryPasswordID | Select-Object -First 1
-                    }
-                    
-                    if ($recovery) { # This 'if' was missing in the provided snippet, adding it for correctness
+                    if ($recovery) {
                         $parentDN = $recovery.DistinguishedName -replace '^CN=[^,]+,',''
                         $compParent = Get-ADComputer -Identity $parentDN -ErrorAction SilentlyContinue
                         if ($compParent) { $hostnameResolved = $compParent.Name }
-                        Write-Log "Chave localizada via ID Global. Hostname detectado: $hostnameResolved" "SUCCESS"
+                        Write-Log "Chave localizada via LDAP (ID: $prefix). Hostname: $hostnameResolved" "SUCCESS"
                     }
                 }
 
@@ -218,7 +213,7 @@ function Invoke-TaskExecution {
 }
 
 # --- LOOP PRINCIPAL ---
-Write-Log "Daemon v5.1 ATIVO - Estrutura Resiliente + Features v1.5.6" "SUCCESS"
+Write-Log "Daemon v5.4 ATIVO - Estrutura Resiliente + LDAP Fix" "SUCCESS"
 
 while ($true) {
     try {
