@@ -219,7 +219,7 @@
 
                 <!-- Versão no canto inferior -->
                 <div class="text-center text-xs text-gray-400 pt-4 border-t border-gray-100">
-                    v1.5.3 • Leandro Araújo
+                    v1.5.4 • Leandro Araújo
                 </div>
             </div>
         </div>
@@ -921,7 +921,7 @@
 
                             <div class="flex justify-end">
                                 <button @click="requestBitlocker"
-                                    :disabled="bitlockerLoading || !bitlockerHostname || !bitlockerAnalyst || !bitlockerUserId || bitlockerPasswordId.length < 8"
+                                    :disabled="bitlockerLoading || !bitlockerHostname || !bitlockerAnalyst || !bitlockerUserId"
                                     class="w-full sm:w-auto bg-gray-800 hover:bg-black text-white px-10 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50 shadow-lg flex items-center justify-center gap-2 transform hover:scale-105 active:scale-95">
                                     <svg v-if="bitlockerLoading" class="animate-spin h-5 w-5 text-white" fill="none"
                                         viewBox="0 0 24 24">
@@ -1150,7 +1150,7 @@
 
                 // DATA FILTERS (v1.4.0)
                 // DATA FILTERS (v1.4.0)
-                console.log("Version 1.5.3 (BitLocker Refined) Loaded");
+                console.log("Version 1.5.4 (BitLocker Template Fix) Loaded");
                 const searchFilters = ref({ id: '', nome: '', user_name: '', email: '', centro_custo: '' });
                 const mirrorFilters = ref({ id: '', nome: '', user_name: '', email: '', centro_custo: '' });
 

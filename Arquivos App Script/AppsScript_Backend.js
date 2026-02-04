@@ -1,4 +1,4 @@
-// --- VERSÃO API: 1.5.3 (BitLocker Refined & Vue Fix) ---
+// --- VERSÃO API: 1.5.4 (BitLocker Template Runtime Fix) ---
 const PROJECT_ID_API = 'maga-bigdata';
 
 // ÚNICA PLANILHA DE GESTÃO
