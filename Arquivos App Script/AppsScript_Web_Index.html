@@ -1502,13 +1502,13 @@
 
                 const pollMirrorStatus = (reqId) => {
                     let attempts = 0;
-                    // Reduzido para 30 tentativas de 2s = 60 segundos
-                    const maxAttempts = 30;
+                    // 60 tentativas de 1s = 60 segundos
+                    const maxAttempts = 60;
                     if (mirrorPollInterval.value) clearInterval(mirrorPollInterval.value);
 
                     mirrorPollInterval.value = setInterval(() => {
                         attempts++;
-                        mirrorStatusMsg.value = `Aguardando grupos do AD... (${attempts * 2}s / ${maxAttempts * 2}s)`;
+                        mirrorStatusMsg.value = `Aguardando grupos do AD... (${attempts}s / ${maxAttempts}s)`;
 
                         google.script.run.withSuccessHandler(res => {
                             if (res.status === 'CONCLUIDO') {
@@ -1535,7 +1535,7 @@
                                 fetchMirrorGroups();
                             }
                         }
-                    }, 2000);
+                    }, 1000);
                 };
 
                 const cancelMirrorPoll = () => {
