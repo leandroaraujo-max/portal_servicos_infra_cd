@@ -187,11 +187,17 @@ function Get-WmsClusterConfig {
 function Sync-PrintQueues {
     param([string]$ApiUrl)
     
-    # Lista de servidores WMS para tentar (fallback)
-    $wmsServers = @(
-        "ml-ibm-wms-01.magazineluiza.intranet",
-        "ml-ibm-wms-02.magazineluiza.intranet"
-    )
+    
+    # Obtém lista de servidores WMS da API (Failover Coluna C - Planilha Servidores)
+    $wmsServers = Get-WmsClusterConfig -Url $ApiUrl
+    
+    if (-not $wmsServers -or $wmsServers.Count -eq 0) {
+        Write-Log "Usando fallback local para Cluster WMS" "WARN"
+        $wmsServers = @(
+            "ml-ibm-wms-01.magazineluiza.intranet",
+            "ml-ibm-wms-02.magazineluiza.intranet"
+        )
+    }
     
     $printers = $null
     $lastError = $null
