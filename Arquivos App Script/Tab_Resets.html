@@ -1,0 +1,152 @@
+<!-- Tab_Resets.html - Aba de Reset/Desbloqueio de Senha -->
+<!-- v1.7.0: Componente modular extraído do AppsScript_Web_Index.html -->
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+    <div class="flex flex-col gap-4">
+        <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                {{ searchLabel }}
+            </label>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <div class="relative flex-1">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <input type="text" v-model="searchQuery" @keyup.enter="performSearch"
+                        placeholder="Busca Coringa: Nome, ID, Usuário ou Email..."
+                        class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-9 text-sm border-gray-300 rounded-lg p-2.5 border bg-white shadow-sm">
+                </div>
+                <button @click="performSearch" :disabled="loading"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-all disabled:opacity-50 shadow-md flex items-center justify-center whitespace-nowrap">
+                    <svg v-if="loading" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none"
+                        viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                        </circle>
+                        <path class="opacity-75" fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                        </path>
+                    </svg>
+                    {{ loading ? 'Buscando...' : 'PESQUISAR' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div v-if="hasResults" class="flex flex-wrap items-center justify-between gap-4 pb-2">
+    <div class="text-xs text-gray-400">Encontrados: {{ filteredResults.length }}</div>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[400px] flex flex-col">
+    <div v-if="!hasResults && !loading"
+        class="flex-1 flex flex-col items-center justify-center p-10 text-center text-gray-400">
+        <svg class="h-16 w-16 mb-4 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+        <p v-if="hasSearched">Nenhum colaborador encontrado.</p>
+        <p v-else>Use os filtros acima para encontrar colaboradores.</p>
+    </div>
+
+    <div v-if="hasResults" class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                        <input type="checkbox" @change="toggleAll" :checked="allSelected"
+                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4">
+                    </th>
+                    <th scope="col" @click="sortResults('id')"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+                        ID
+                        <span v-if="resultSortColumn === 'id'" class="ml-1">{{ resultSortDirection === 'asc' ? '↑' : '↓'
+                            }}</span>
+                    </th>
+                    <th scope="col" @click="sortResults('nome')"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+                        Nome / Cargo
+                        <span v-if="resultSortColumn === 'nome'" class="ml-1">{{ resultSortDirection === 'asc' ? '↑' :
+                            '↓' }}</span>
+                    </th>
+                    <th scope="col" @click="sortResults('user_name')"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+                        Usuário Rede
+                        <span v-if="resultSortColumn === 'user_name'" class="ml-1">{{ resultSortDirection === 'asc' ?
+                            '↑' : '↓' }}</span>
+                    </th>
+                    <th scope="col" @click="sortResults('email')"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+                        Email
+                        <span v-if="resultSortColumn === 'email'" class="ml-1">{{ resultSortDirection === 'asc' ? '↑' :
+                            '↓' }}</span>
+                    </th>
+                    <th scope="col" @click="sortResults('centro_custo')"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+                        Centro de Custo
+                        <span v-if="resultSortColumn === 'centro_custo'" class="ml-1">{{ resultSortDirection === 'asc' ?
+                            '↑' : '↓' }}</span>
+                    </th>
+                </tr>
+                <!-- FILTROS DE COLUNA -->
+                <tr class="bg-gray-100">
+                    <th class="px-2 py-1"></th>
+                    <th class="px-2 py-1">
+                        <input type="text" v-model="searchFilters.id" placeholder="Filtrar ID"
+                            class="w-full text-xs border-gray-300 rounded p-1 focus:ring-blue-500 font-normal">
+                    </th>
+                    <th class="px-2 py-1">
+                        <input type="text" v-model="searchFilters.nome" placeholder="Filtrar Nome"
+                            class="w-full text-xs border-gray-300 rounded p-1 focus:ring-blue-500 font-normal">
+                    </th>
+                    <th class="px-2 py-1">
+                        <input type="text" v-model="searchFilters.user_name" placeholder="Filtrar User"
+                            class="w-full text-xs border-gray-300 rounded p-1 focus:ring-blue-500 font-normal">
+                    </th>
+                    <th class="px-2 py-1">
+                        <input type="text" v-model="searchFilters.email" placeholder="Filtrar Email"
+                            class="w-full text-xs border-gray-300 rounded p-1 focus:ring-blue-500 font-normal">
+                    </th>
+                    <th class="px-2 py-1">
+                        <input type="text" v-model="searchFilters.centro_custo" placeholder="Filtrar CC"
+                            class="w-full text-xs border-gray-300 rounded p-1 focus:ring-blue-500 font-normal">
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-for="user in filteredResults" :key="user.user_name"
+                    :class="{'bg-blue-50': user.selected, 'hover:bg-gray-50': !user.selected}"
+                    class="transition-colors text-xs">
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <input type="checkbox" v-model="user.selected"
+                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4">
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <span class="text-xs font-mono bg-gray-100 px-2 py-0.5 rounded">{{ user.id || '-' }}</span>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div>
+                                <div class="font-medium text-gray-900">{{ toTitleCase(user.nome) }}</div>
+                                <div class="text-[10px] text-gray-500">{{ toTitleCase(user.cargo) }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="text-xs text-gray-900 font-mono bg-gray-100 px-2 py-0.5 rounded inline-block">{{
+                            user.user_name }}</div>
+                        <span v-if="user.ja_resetado"
+                            class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-800">Já
+                            Resetado</span>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-500">{{ user.email ?
+                        user.email.toLowerCase() : '-' }}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-500">{{ user.centro_custo }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

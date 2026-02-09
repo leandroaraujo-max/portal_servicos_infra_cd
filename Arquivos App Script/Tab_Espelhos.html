@@ -1,0 +1,191 @@
+<!-- Tab_Espelhos.html - Aba de Espelhamento de Acesso -->
+<!-- v1.7.0: Componente modular extraído do AppsScript_Web_Index.html -->
+
+<!-- PROGRESS BAR -->
+<div class="flex items-center justify-center space-x-4 mb-8">
+    <div class="flex items-center">
+        <span :class="mirrorStep >= 1 ? 'bg-blue-600' : 'bg-gray-300'"
+            class="flex items-center justify-center w-8 h-8 rounded-full text-white font-bold text-sm">1</span>
+        <span class="ml-2 text-sm font-medium" :class="mirrorStep >= 1 ? 'text-blue-600' : 'text-gray-500'">Modelo e
+            Grupos</span>
+    </div>
+    <div class="w-16 h-0.5 bg-gray-200"></div>
+    <div class="flex items-center">
+        <span :class="mirrorStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'"
+            class="flex items-center justify-center w-8 h-8 rounded-full text-white font-bold text-sm">2</span>
+        <span class="ml-2 text-sm font-medium" :class="mirrorStep >= 2 ? 'text-blue-600' : 'text-gray-500'">Usuários
+            Destino</span>
+    </div>
+</div>
+
+<!-- ETAPA 1: MODELO -->
+<div v-if="mirrorStep === 1" class="space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Etapa 1: Definir Usuário Modelo</h2>
+        <p class="text-sm text-gray-500 mb-6">Digite o <b>Usuário de Rede</b> de quem já possui os acessos.</p>
+
+        <div class="flex flex-col sm:flex-row gap-4 items-stretch sm:items-end">
+            <div class="flex-1">
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Usuário
+                    Modelo</label>
+                <input type="text" v-model="mirrorForm.modelUser" @keyup.enter="fetchMirrorGroups"
+                    placeholder="Ex: usuario_ad"
+                    class="block w-full px-3 py-2.5 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg border bg-white">
+            </div>
+            <button @click="fetchMirrorGroups" :disabled="mirrorLoading || !mirrorForm.modelUser"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center">
+                {{ mirrorLoading ? 'Buscando...' : 'Listar Grupos' }}
+            </button>
+        </div>
+        <div v-if="mirrorStatusMsg"
+            class="mt-4 flex items-center justify-between bg-orange-50 border border-orange-100 rounded-lg p-3">
+            <div class="text-sm text-orange-600 font-medium flex items-center gap-2">
+                <svg class="animate-spin h-4 w-4 text-orange-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+                {{ mirrorStatusMsg }}
+            </div>
+            <button @click="cancelMirrorPoll"
+                class="text-xs text-red-600 hover:text-red-800 font-bold underline">CANCELAR</button>
+        </div>
+    </div>
+
+    <div v-if="mirrorGroups.length > 0"
+        class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-fade-in">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-md font-bold text-gray-800">Selecione os Grupos a Espelhar ({{ mirrorGroups.length }})</h3>
+            <div class="text-sm text-gray-500 space-x-2">
+                <button @click="selectAllGroups(true)" class="text-blue-600 hover:underline">Marcar Todos</button>
+                <span>|</span>
+                <button @click="selectAllGroups(false)" class="text-blue-600 hover:underline">Desmarcar Todos</button>
+            </div>
+        </div>
+        <div
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[300px] overflow-y-auto p-2 border border-gray-100 rounded-lg bg-gray-50">
+            <label v-for="grp in mirrorGroups" :key="grp.name"
+                class="flex items-start space-x-3 p-2 hover:bg-white rounded border border-transparent hover:border-gray-200 transition-all cursor-pointer">
+                <input type="checkbox" v-model="grp.selected"
+                    class="mt-1 rounded border-gray-300 text-blue-600 h-4 w-4">
+                <span class="text-xs text-gray-700 break-all">{{ grp.name }}</span>
+            </label>
+        </div>
+        <div class="mt-6 flex justify-end">
+            <button @click="mirrorStep = 2" :disabled="selectedGroupsCount === 0"
+                class="bg-blue-600 hover:bg-blue-800 text-white font-bold py-2 px-8 rounded-lg shadow-md disabled:opacity-50">
+                Próxima Etapa: Selecionar Destinos →
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ETAPA 2: DESTINOS -->
+<div v-if="mirrorStep === 2" class="space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-medium text-gray-900">Etapa 2: Selecionar Usuários Destino</h2>
+            <button @click="mirrorStep = 1" class="text-blue-600 hover:underline text-sm">← Voltar</button>
+        </div>
+        <p class="text-sm text-gray-500 mb-4">Busque e selecione os usuários que receberão os grupos.</p>
+
+        <div class="flex flex-col sm:flex-row gap-4 items-stretch sm:items-end">
+            <div class="flex-1">
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Buscar
+                    Destino</label>
+                <input type="text" v-model="mirrorTargetSearch" @keyup.enter="searchMirrorTargets"
+                    placeholder="Nome, ID ou Usuário"
+                    class="block w-full px-3 py-2.5 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg border bg-white">
+            </div>
+            <button @click="searchMirrorTargets" :disabled="mirrorLoading || !mirrorTargetSearch"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
+                {{ mirrorLoading ? 'Buscando...' : 'Buscar' }}
+            </button>
+        </div>
+    </div>
+
+    <!-- Resultados da Busca de Destinos -->
+    <div v-if="mirrorTargetResults.length > 0" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-md font-bold text-gray-800 mb-4">Resultados ({{ mirrorTargetResults.length }})</h3>
+        <div class="overflow-x-auto max-h-[250px] overflow-y-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-10"></th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Usuário</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Filial</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-100">
+                    <tr v-for="u in mirrorTargetResults" :key="u.id" class="hover:bg-blue-50 cursor-pointer"
+                        @click="toggleMirrorTarget(u)">
+                        <td class="px-4 py-2">
+                            <input type="checkbox" :checked="isMirrorTargetSelected(u)"
+                                class="rounded border-gray-300 text-blue-600 h-4 w-4">
+                        </td>
+                        <td class="px-4 py-2 text-sm text-gray-600">{{ u.id }}</td>
+                        <td class="px-4 py-2 text-sm font-medium text-gray-900">{{ toTitleCase(u.nome) }}</td>
+                        <td class="px-4 py-2 text-sm text-gray-600">{{ u.user_name }}</td>
+                        <td class="px-4 py-2 text-sm text-gray-500">{{ u.filial }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Destinos Selecionados -->
+    <div v-if="mirrorSelectedTargets.length > 0" class="bg-green-50 rounded-xl shadow-sm border border-green-200 p-6">
+        <h3 class="text-md font-bold text-green-800 mb-4">Destinos Selecionados ({{ mirrorSelectedTargets.length }})
+        </h3>
+        <div class="overflow-x-auto max-h-[200px] overflow-y-auto">
+            <table class="min-w-full divide-y divide-green-200">
+                <thead class="bg-green-100 sticky top-0">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-green-700 uppercase">ID</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-green-700 uppercase">Nome</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-green-700 uppercase">Usuário</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-green-700 uppercase">Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-green-100">
+                    <tr v-for="u in mirrorSelectedTargets" :key="u.id">
+                        <td class="px-4 py-2 text-sm text-gray-600">{{ u.id }}</td>
+                        <td class="px-4 py-2 text-sm font-medium text-gray-900">{{ toTitleCase(u.nome) }}</td>
+                        <td class="px-4 py-2 text-sm text-gray-600">{{ u.user_name }}</td>
+                        <td class="px-4 py-2">
+                            <button @click="removeMirrorTarget(u)"
+                                class="text-red-500 hover:text-red-700 text-xs font-bold">REMOVER</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- FINALIZAÇÃO -->
+    <div
+        class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex-1">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Analista Responsável pelo
+                Atendimento:</label>
+            <select v-model="selectedAnalyst"
+                class="w-full md:w-64 border-gray-300 rounded-lg p-2.5 bg-gray-50 focus:ring-blue-500">
+                <option value="" disabled>Selecione o analista...</option>
+                <option v-for="a in analystList" :key="a" :value="a">{{ a }}</option>
+            </select>
+        </div>
+        <div class="text-right">
+            <div class="text-sm text-gray-500 mb-2">
+                <b>{{ selectedTargetsCount }}</b> destino(s) selecionado(s)
+            </div>
+            <button @click="submitMirrorFinal" :disabled="selectedTargetsCount === 0 || !selectedAnalyst || submitting"
+                class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-10 rounded-xl shadow-lg transition-transform hover:scale-105 disabled:opacity-50">
+                FINALIZAR E SOLICITAR ESPELHO
+            </button>
+        </div>
+    </div>
+</div>

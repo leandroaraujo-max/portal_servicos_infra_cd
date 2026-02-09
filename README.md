@@ -1,14 +1,14 @@
-# 🔐 Identity Manager & AD Sync - Magalog Suporte Infra (v1.3.0)
+# 🔐 Identity Manager & AD Sync - Magalog Suporte Infra (v1.7.6)
 
 ## 🚀 Visão Geral
-O **Identity Manager** evoluiu de uma ferramenta simples de reset para um ecossistema completo de gestão de identidades e automação de Active Directory. O sistema utiliza uma arquitetura híbrida para unir a agilidade da nuvem (Google Cloud/Apps Script) com a autoridade de execução local (PowerShell/Active Directory).
+O **Identity Manager** evoluiu de uma ferramenta simples de reset para um ecossistema completo de gestão de identidades e automação de Active Directory e Infraestrutura. O sistema utiliza uma arquitetura híbrida para unir a agilidade da nuvem (Google Cloud/Apps Script) com a autoridade de execução local (PowerShell/Active Directory).
 
 ## 🏗️ Arquitetura do Sistema
 O ecossistema é composto por três pilares fundamentais:
 
 1.  **Orquestrador Web (Middleware/Backend)**: Desenvolvido em **Google Apps Script**, gerencia a lógica de negócio, autenticação (SSO), fila de solicitações e auditoria.
 2.  **Interface de Governança (Frontend)**: Uma Single Page Application (SPA) moderna em **Vue.js**, oferecendo uma experiência premium (Magalu Style) para analistas e usuários, com busca em tempo real via **BigQuery**.
-3.  **Daemon de Execução (Worker)**: Um serviço **PowerShell** resiliente (`Unified_AD_Daemon.ps1`) que atua como o braço operacional no domínio, processando tarefas da fila e realizando as alterações diretamente no Active Directory.
+3.  **Daemon de Execução (Worker - v6.0)**: Um serviço **PowerShell** resiliente (`Unified_AD_Daemon.ps1`) que atua como o braço operacional no domínio, processando tarefas da fila (Resets, BitLocker, WMS) e reportando via API e SMTP.
 
 ---
 
@@ -19,6 +19,8 @@ Centralização absoluta de demandas. O sistema não distingue apenas resets; el
 *   **Reset de Senha**: Automação total (Reset + Desbloqueio + Troca Obrigatória).
 *   **Account Unlock**: Desbloqueio técnico sem alteração de credenciais.
 *   **User Mirroring**: Clonagem inteligente de grupos de segurança entre usuários modelo e alvos.
+*   **WMS Print Clean (v1.7)**: Limpeza remota de filas de impressão no Cluster WMS IBM.
+*   **BitLocker Recovery**: Recuperação segregada de chaves de criptografia.
 
 ### 2. Motor de SLA & Governança (v1.3.0)
 Garantia de atendimento e conformidade:

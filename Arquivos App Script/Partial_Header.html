@@ -1,0 +1,79 @@
+<!-- Partial_Header.html - Cabeçalho com Navegação -->
+<!-- v1.7.0: Componente modular extraído do AppsScript_Web_Index.html -->
+
+<header class="header-gradient text-white shadow-lg z-20 py-1 sm:py-0">
+    <div
+        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[4rem] sm:h-20 flex flex-col sm:flex-row items-center justify-between py-2 sm:py-0 gap-2">
+        <div class="flex items-center justify-between w-full sm:w-auto">
+            <div class="flex items-center space-x-2 sm:space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
+                @click="switchTab('new')">
+                <img :src="appLogo" alt="LuizaLabs" class="h-6 sm:h-8 w-auto filter brightness-0 invert">
+                <div class="leading-tight">
+                    <div class="font-bold text-sm sm:text-xl tracking-tight">Gerenciamento de Usuários</div>
+                    <div class="text-[10px] text-blue-200/80">Suporte Infra CDs</div>
+                </div>
+            </div>
+            <div class="flex sm:hidden items-center space-x-2">
+                <div class="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold"
+                    @click="logout">
+                    {{ userInitials }}
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full sm:w-auto overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+            <div class="flex space-x-1 bg-white/10 rounded-lg p-1 min-w-max">
+                <button @click="switchTab('new')"
+                    :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'new', 'text-white/80 hover:text-white': currentTab !== 'new'}"
+                    class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all">
+                    Resets
+                </button>
+                <button @click="switchTab('mirror')"
+                    :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'mirror', 'text-white/80 hover:text-white': currentTab !== 'mirror'}"
+                    class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all">
+                    Espelhos
+                </button>
+                <button @click="switchTab('unlock')"
+                    :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'unlock', 'text-white/80 hover:text-white': currentTab !== 'unlock'}"
+                    class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all">
+                    Desbloqueios
+                </button>
+                <button @click="loadQueue"
+                    :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'queue', 'text-white/80 hover:text-white': currentTab !== 'queue'}"
+                    class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all">
+                    Fila
+                </button>
+                <button @click="switchTab('bitlocker')"
+                    :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'bitlocker', 'text-white/80 hover:text-white': currentTab !== 'bitlocker'}"
+                    class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 001-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    BitLocker
+                </button>
+                <button @click="switchTab('wms')"
+                    :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'wms', 'text-white/80 hover:text-white': currentTab !== 'wms'}"
+                    class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                            d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z" />
+                    </svg>
+                    WMS
+                </button>
+            </div>
+        </div>
+
+        <div class="hidden sm:flex items-center space-x-4">
+            <div class="text-right">
+                <div class="text-[11px] font-medium opacity-90 leading-none mb-1">{{ userEmail }}</div>
+                <div class="text-[9px] text-white/60">Sessão Corporativa</div>
+            </div>
+            <div class="h-10 w-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-sm font-bold avatar-glow cursor-pointer hover:bg-white/30 transition-all"
+                @click="logout" title="Sair">
+                {{ userInitials }}
+            </div>
+        </div>
+    </div>
+</header>

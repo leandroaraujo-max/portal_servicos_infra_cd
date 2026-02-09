@@ -9,3 +9,6 @@ https://docs.google.com/spreadsheets/d/1Q13WpkiqRVjoniHT938JJlEdHqCFBYoywdXsDf2S
 
 #Planilha - DB - Staging
 https://docs.google.com/spreadsheets/d/1rDuZA-I6sAPtkJI33qDeU7gaCv_o8m0UKoAqiw4rDCQ/edit?gid=1933126399#gid=1933126399
+
+#Planilha - Servidores
+https://docs.google.com/spreadsheets/d/1Towa_GmwdzyO8-P11h3fHQKsdIdWod5QNGXdgrQqVJI/edit?gid=0#gid=0

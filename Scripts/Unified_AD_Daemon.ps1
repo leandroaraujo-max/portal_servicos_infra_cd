@@ -1,5 +1,5 @@
 # ==============================================================================
-# IDENTITY MANAGER - SUPORTE INFRA CDS - v5.9 (MULTI-ENV SUPPORT)
+# IDENTITY MANAGER - SUPORTE INFRA CDS - v6.0 (WMS PRINT QUEUES SUPPORT)
 # ==============================================================================
 
 # --- CONFIGURAÇÃO ---
@@ -30,6 +30,10 @@ if (-not (Get-Module -Name ActiveDirectory)) {
     Import-Module ActiveDirectory -ErrorAction SilentlyContinue
 }
 
+# Configuração UTF-8 para console e saída (silencia erro se não suportado)
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 function Write-Log {
     param([string]$Message, [string]$Level = "INFO", [string]$Prefix = "")
     $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
@@ -37,6 +41,14 @@ function Write-Log {
     $color = switch ($Level) { "INFO" { "Cyan" } "WARN" { "Yellow" } "ERROR" { "Red" } "SUCCESS" { "Green" } default { "Gray" } }
     Write-Host $logEntry -ForegroundColor $color
     $logEntry | Out-File -FilePath $LogFile -Append -Encoding UTF8
+}
+
+# Função para enviar requisições POST com encoding UTF-8
+function Send-ApiRequest {
+    param([string]$Uri, [hashtable]$Body)
+    $json = ConvertTo-Json $Body -Depth 5
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+    return Invoke-RestMethod -Uri $Uri -Method Post -Body $bytes -ContentType "application/json; charset=utf-8"
 }
 
 # --- FUNÇÕES DE EMAIL (ESTILIZADAS MAGALU) ---
@@ -116,6 +128,125 @@ function Send-BitlockerEmail {
     catch { Write-Log "Erro SMTP BitLocker: $($_.Exception.Message)" "ERROR"; return $false }
 }
 
+function Send-WMSEmail {
+    param($Para, $QueueName, $ReqId, $StatusMsg, $Sucesso)
+    
+    $subjectStatus = if ($Sucesso) { "CONCLUÍDO" } else { "ERRO" }
+    $colorStatus = if ($Sucesso) { "#16a34a" } else { "#dc2626" }
+    $assunto = "🖨️ WMS: Limpeza de Fila $subjectStatus - $QueueName"
+    
+    $corpoHtml = "
+    <div style='font-family: Arial; padding: 25px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;'>
+        <h2 style='color: #1e40af; margin-top: 0;'>Notificação WMS</h2>
+        <p style='color: #334155; font-size: 14px;'>A solicitação de limpeza de fila de impressão foi executada pelo Agente Automático.</p>
+        
+        <div style='background: white; padding: 15px; border-left: 4px solid $colorStatus; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);'>
+            <p style='margin: 5px 0;'><b style='color: #475569;'>ID Solicitação:</b> #$ReqId</p>
+            <p style='margin: 5px 0;'><b style='color: #475569;'>Fila:</b> $QueueName</p>
+            <p style='margin: 5px 0;'><b style='color: #475569;'>Status:</b> <span style='color: $colorStatus; font-weight: bold;'>$subjectStatus</span></p>
+        </div>
+        
+        <div style='background: #f1f5f9; padding: 12px; border-radius: 6px; font-size: 13px; color: #334155;'>
+            <b>Detalhes da Execução:</b><br>
+            $StatusMsg
+        </div>
+        
+        <p style='font-size: 11px; color: #94a3b8; margin-top: 20px; text-align: center;'>Este é um e-mail automático. Não responda.</p>
+    </div>"
+
+    try {
+        $msg = New-Object System.Net.Mail.MailMessage -ArgumentList "suporte-infra-cds@luizalabs.com", $Para, $assunto, $corpoHtml
+        $msg.IsBodyHtml = $true
+        $smtp = New-Object System.Net.Mail.SmtpClient($global:smtpServer, 25)
+        $smtp.Send($msg)
+        return $true
+    }
+    catch { Write-Log "Erro SMTP WMS: $($_.Exception.Message)" "ERROR"; return $false }
+}
+
+# --- FUNÇÕES WMS (v1.7.0) ---
+
+function Get-WmsClusterConfig {
+    param([string]$ApiUrl)
+    
+    try {
+        $response = Invoke-RestMethod -Uri "$ApiUrl`?mode=get_wms_cluster" -Method Get -ErrorAction Stop
+        if ($response -and $response.Count -gt 0) {
+            Write-Log "Cluster WMS: $($response.Count) servidores obtidos" "INFO"
+            return $response
+        }
+        Write-Log "Cluster WMS: Lista vazia retornada" "WARN"
+        return @()
+    }
+    catch {
+        Write-Log "Erro ao obter cluster WMS: $($_.Exception.Message)" "ERROR"
+        return @()
+    }
+}
+
+function Sync-PrintQueues {
+    param([string]$ApiUrl)
+    
+    # Lista de servidores WMS para tentar (fallback)
+    $wmsServers = @(
+        "ml-ibm-wms-01.magazineluiza.intranet",
+        "ml-ibm-wms-02.magazineluiza.intranet"
+    )
+    
+    $printers = $null
+    $lastError = $null
+    
+    foreach ($server in $wmsServers) {
+        try {
+            Write-Log "Tentando conectar ao servidor WMS: $server..." "INFO"
+            
+            # Testa conexão primeiro
+            if (-not (Test-Connection -ComputerName $server -Count 1 -Quiet)) {
+                Write-Log "Servidor $server não responde ao ping" "WARN"
+                continue
+            }
+            
+            # Lista todas as filas de impressão do servidor
+            $printers = Get-Printer -ComputerName $server -ErrorAction Stop | 
+            Select-Object -ExpandProperty Name
+            
+            if ($printers -and $printers.Count -gt 0) {
+                Write-Log "Conectado a $server - Encontradas $($printers.Count) filas" "SUCCESS"
+                break
+            }
+        }
+        catch {
+            $lastError = $_.Exception.Message
+            Write-Log "Falha em $server : $lastError" "WARN"
+        }
+    }
+    
+    if (-not $printers -or $printers.Count -eq 0) {
+        throw "Nao foi possivel obter impressoras de nenhum servidor WMS. Ultimo erro: $lastError"
+    }
+    
+    # Ordena alfabeticamente
+    $printers = $printers | Sort-Object
+    Write-Log "Impressoras ordenadas alfabeticamente" "INFO"
+    
+    # Envia para o Backend com encoding UTF-8
+    try {
+        $payload = @{
+            action   = "update_printer_cache"
+            printers = $printers
+        } | ConvertTo-Json -Depth 3
+        
+        # Converte para UTF-8
+        $payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
+        
+        $result = Invoke-RestMethod -Uri $ApiUrl -Method Post -Body $payloadBytes -ContentType "application/json; charset=utf-8" -ErrorAction Stop
+        Write-Log "Cache de impressoras atualizado: $result" "SUCCESS"
+    }
+    catch {
+        throw "Erro ao enviar cache para API: $($_.Exception.Message)"
+    }
+}
+
 # --- PROCESSAMENTO ---
 
 function Invoke-TaskExecution {
@@ -143,6 +274,18 @@ function Invoke-TaskExecution {
         $payload = @{ action = "report_status"; id = $id; status = "ERRO"; message = "Iniciado" }
 
         switch ($type) {
+            "FETCH_GROUPS" {
+                $userModelo = ($Task.user_modelo, $Task.USER_MODELO | Where-Object { $_ } | Select-Object -First 1)
+                if (-not $userModelo) { throw "Usuário Modelo não informado." }
+
+                Write-Log "Buscando grupos para modelo: $userModelo" "INFO" $LogPfx
+                $groups = (Get-ADPrincipalGroupMembership -Identity $userModelo -ErrorAction Stop | Select-Object -ExpandProperty Name) -join ";"
+                
+                $payload.status = "CONCLUIDO"
+                $payload.message = "Grupos obtidos com sucesso."
+                $payload.grupos = $groups
+            }
+
             "RESET" {
                 if (-not $clearPwd) { throw "Senha ausente para Reset." }
                 $securePwd = ConvertTo-SecureString $clearPwd -AsPlainText -Force
@@ -219,6 +362,67 @@ function Invoke-TaskExecution {
                 Unlock-ADAccount -Identity $user -ErrorAction Stop
                 $payload.status = "CONCLUIDO"; $payload.message = "Conta desbloqueada com sucesso."
             }
+
+            "WMS_PRINT_CLEAN" {
+                # v6.0: Limpeza de Fila de Impressão WMS em Cluster
+                $queueName = ($Task.queue_name, $Task.QUEUE_NAME, $Task.fila | Where-Object { $_ } | Select-Object -First 1)
+                
+                if (-not $queueName) {
+                    throw "Nome da fila de impressao nao especificado."
+                }
+
+                Write-Log "Iniciando limpeza da fila: $queueName" "INFO" $LogPfx
+                
+                # Obtém lista de servidores do cluster
+                $clusterServers = Get-WmsClusterConfig -ApiUrl $ApiUrl
+                
+                if ($clusterServers.Count -eq 0) {
+                    throw "Cluster WMS vazio ou inacessivel."
+                }
+
+                $successCount = 0
+                $errorCount = 0
+                $errors = @()
+
+                foreach ($server in $clusterServers) {
+                    try {
+                        Write-Log "Limpando fila '$queueName' no servidor $server..." "INFO" $LogPfx
+                        
+                        # Remove todos os trabalhos da fila
+                        Get-PrintJob -ComputerName $server -PrinterName $queueName -ErrorAction Stop | 
+                        Remove-PrintJob -ErrorAction Stop
+                        
+                        $successCount++
+                        Write-Log "Fila limpa com sucesso em $server" "SUCCESS" $LogPfx
+                    }
+                    catch {
+                        $errorCount++
+                        $errorMsg = "Erro em ${server}: $($_.Exception.Message)"
+                        $errors += $errorMsg
+                        Write-Log $errorMsg "ERROR" $LogPfx
+                    }
+                }
+
+                if ($successCount -gt 0) {
+                    $msgFinal = "Fila '$queueName' limpa em $successCount/$($clusterServers.Count) servidores."
+                    if ($errorCount -gt 0) {
+                        $msgFinal += " Erros: $errorCount. Detalhes: $($errors -join '; ')"
+                    }
+                    $payload.status = "CONCLUIDO"
+                    $payload.message = $msgFinal
+                    
+                    if ($analista) {
+                        Send-WMSEmail -Para $analista -QueueName $queueName -ReqId $id -StatusMsg $msgFinal -Sucesso $true
+                    }
+                }
+                else {
+                    $msgErro = "Falha ao limpar fila em todos os servidores. Erros: $($errors -join '; ')"
+                    if ($analista) {
+                        Send-WMSEmail -Para $analista -QueueName $queueName -ReqId $id -StatusMsg $msgErro -Sucesso $false
+                    }
+                    throw $msgErro
+                }
+            }
             
             default {
                 throw "Tipo de tarefa não suportado: $type"
@@ -226,21 +430,41 @@ function Invoke-TaskExecution {
         }
 
         # Update Final
-        Invoke-RestMethod -Uri $ApiUrl -Method Post -Body (ConvertTo-Json $payload) -ContentType "application/json"
+        Send-ApiRequest -Uri $ApiUrl -Body $payload
         Write-Log "ID #$id OK!" "SUCCESS" $LogPfx
 
     }
     catch {
         Write-Log "FALHA ID #$id : $($_.Exception.Message)" "ERROR" $LogPfx
         $errPayload = @{ action = "report_status"; id = $id; status = "ERRO"; message = $_.Exception.Message }
-        Invoke-RestMethod -Uri $ApiUrl -Method Post -Body (ConvertTo-Json $errPayload) -ContentType "application/json"
+        Send-ApiRequest -Uri $ApiUrl -Body $errPayload
     }
 }
 
 # --- LOOP PRINCIPAL ---
-Write-Log "Daemon v5.9 ATIVO - MULTI-AMBIENTE (PROD + STAGING)" "SUCCESS"
+Write-Log "Daemon v6.0 ATIVO - MULTI-AMBIENTE (PROD + STAGING) + WMS SUPPORT" "SUCCESS"
+
+# Controle de sync de impressoras WMS (a cada 2 horas)
+$lastPrinterSync = [DateTime]::MinValue
+$printerSyncIntervalMinutes = 120
 
 while ($true) {
+    # Sync de impressoras WMS periodicamente
+    $timeSinceSync = (Get-Date) - $lastPrinterSync
+    if ($timeSinceSync.TotalMinutes -ge $printerSyncIntervalMinutes) {
+        Write-Log "Iniciando sincronização de impressoras WMS..." "INFO"
+        foreach ($env in $Environments) {
+            try {
+                Sync-PrintQueues -ApiUrl $env.Url
+                Write-Log "Sync WMS concluído para $($env.Name)" "SUCCESS" $env.Prefix
+            }
+            catch {
+                Write-Log "Erro no sync WMS para $($env.Name): $($_.Exception.Message)" "WARN" $env.Prefix
+            }
+        }
+        $lastPrinterSync = Get-Date
+    }
+
     foreach ($env in $Environments) {
         try {
             # Ocasionalmente loga heartbeat
@@ -254,7 +478,7 @@ while ($true) {
                     $rid = ($t.id_solicitacao, $t.id, $t.ID | Where-Object { $_ } | Select-Object -First 1)
                     Write-Log "Limpando ID #$rid (Status: REPROVADO)" "WARN" $env.Prefix
                     $p = @{ action = "report_status"; id = $rid; status = "REPROVADO" }
-                    Invoke-RestMethod -Uri $env.Url -Method Post -Body (ConvertTo-Json $p) -ContentType "application/json"
+                    Send-ApiRequest -Uri $env.Url -Body $p
                     continue
                 }
                 Invoke-TaskExecution -Task $t -EnvContext $env

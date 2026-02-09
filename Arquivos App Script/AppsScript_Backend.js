@@ -1,5 +1,13 @@
-// --- VERSÃO API: 1.6.6 (BITLOCKER FIX) ---
+// --- VERSÃO API: 1.7.0 (WMS CLUSTER FEATURE) ---
 const PROJECT_ID_API = 'maga-bigdata';
+
+/**
+ * v1.7.0: Função para incluir arquivos HTML parciais (Modularização Frontend)
+ * Uso no template: <?!= include('Tab_Resets') ?>
+ */
+function include(filename) {
+    return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
 
 // ÚNICA PLANILHA DE GESTÃO (Obtida dinamicamente via Database.js)
 // [CONSTANTE REMOVIDA] ID_PLANILHA_GESTAO foi descontinuado na v1.6.6 
@@ -24,6 +32,12 @@ function doGet(e) {
         if (e.parameter.mode === 'get_analysts_api') {
             return ContentService.createTextOutput(JSON.stringify(getAnalystsListAPI())).setMimeType(ContentService.MimeType.JSON);
         }
+
+        // v1.7.0: WMS Cluster API (Daemon)
+        if (e.parameter.mode === 'get_wms_cluster') {
+            return ContentService.createTextOutput(JSON.stringify(getWmsClusterNodes())).setMimeType(ContentService.MimeType.JSON);
+        }
+
 
         // DIAGNÓSTICO DE AMBIENTE (v1.6.5)
         if (e.parameter.mode === 'diag') {
@@ -617,6 +631,80 @@ function submitResetQueue(requestData) {
 }
 
 /**
+ * v1.7.0: Função genérica para submissão de solicitações (WMS, etc)
+ * Chamada pelo Frontend via google.script.run.submitRequest(payload)
+ */
+function submitRequest(data) {
+    try {
+        const ss = getDatabaseConnection();
+        let queueSheet = ss.getSheetByName("Solicitações");
+
+        if (!queueSheet) {
+            return { success: false, message: "Aba Solicitações não encontrada" };
+        }
+
+        const timestamp = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss");
+        const requesterEmail = Session.getActiveUser().getEmail();
+
+        // Obter próximo ID
+        const lastRow = queueSheet.getLastRow();
+        let nextId = 1;
+        if (lastRow > 1) {
+            const ids = queueSheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+            const maxId = ids.reduce((max, val) => {
+                const num = parseInt(val, 10);
+                return !isNaN(num) && num > max ? num : max;
+            }, 0);
+            nextId = maxId + 1;
+        }
+
+        // Mapeia Analista
+        const analystData = mapAnalystByEmail(requesterEmail);
+        const finalAnalystEmail = analystData ? analystData.email : (data.analista || requesterEmail);
+
+        // Monta a linha no schema padrão (A-Q)
+        const row = [
+            nextId,                           // A: ID
+            timestamp,                        // B: DATA_HORA
+            data.filial || "",                // C: FILIAL
+            data.user_name || "",             // D: USER_NAME
+            data.nome || "",                  // E: NOME
+            data.email || "",                 // F: EMAIL_COLAB
+            data.centro_custo || "",          // G: CENTRO_CUSTO
+            finalAnalystEmail,                // H: ANALISTA_RESPONSAVEL
+            requesterEmail,                   // I: SOLICITANTE
+            "PENDENTE",                       // J: STATUS_PROCESSAMENTO
+            "PENDENTE",                       // K: STATUS_APROVACAO (Exige aprovação)
+            data.tipo || "WMS_PRINT_CLEAN",   // L: TIPO_TAREFA
+            data.justificativa || "",         // M: DETALHES_ADICIONAIS
+            data.queue_name || "",            // N: MODELO (usado para queue_name no WMS)
+            "",                               // O: DESTINOS
+            "",                               // P: GRUPOS
+            ""                                // Q: ULTIMO_LEMBRETE
+        ];
+
+        queueSheet.appendRow(row);
+
+        // Envia email de aprovação para o analista
+        sendApprovalEmail(
+            data.analista,      // Nome
+            finalAnalystEmail,  // Email
+            nextId,             // ID
+            "WMS_PRINT_CLEAN",  // Tipo
+            data.queue_name,    // Info1: Fila
+            data.justificativa  // Info2: Justificativa
+        );
+
+        console.log(`[WMS] Solicitação #${nextId} criada (PENDENTE): ${data.tipo} - ${data.queue_name}`);
+        return { success: true, id: nextId };
+
+    } catch (e) {
+        console.error("Erro em submitRequest:", e);
+        return { success: false, message: e.message };
+    }
+}
+
+/**
  * Busca dados do analista na aba 'Analistas' usando o e-mail da sessão.
  */
 function mapAnalystByEmail(email) {
@@ -774,6 +862,36 @@ function doPost(e) {
                 }
             }
             return ContentService.createTextOutput("ID Espelho não encontrado").setMimeType(ContentService.MimeType.TEXT);
+        }
+
+        // 3. UPDATE PRINTER CACHE (v1.7.0 - WMS)
+        if (data.action === "update_printer_cache") {
+            const printers = data.printers || [];
+            if (printers.length === 0) {
+                return ContentService.createTextOutput("Lista de impressoras vazia").setMimeType(ContentService.MimeType.TEXT);
+            }
+
+            let cacheSheet = ss.getSheetByName("Cache_Impressoras");
+            if (!cacheSheet) {
+                cacheSheet = ss.insertSheet("Cache_Impressoras");
+                cacheSheet.appendRow(["LastSync", "PrinterName"]);
+            }
+
+            // Limpa dados antigos (preserva header)
+            const lastRow = cacheSheet.getLastRow();
+            if (lastRow > 1) {
+                cacheSheet.deleteRows(2, lastRow - 1);
+            }
+
+            // Insere novas impressoras
+            const now = new Date();
+            const rows = printers.map(p => [now, p]);
+            if (rows.length > 0) {
+                cacheSheet.getRange(2, 1, rows.length, 2).setValues(rows);
+            }
+
+            console.log(`[WMS] Cache atualizado: ${printers.length} impressoras`);
+            return ContentService.createTextOutput(`OK: ${printers.length} impressoras`).setMimeType(ContentService.MimeType.TEXT);
         }
 
         return ContentService.createTextOutput("Ação não reconhecida").setMimeType(ContentService.MimeType.TEXT);
@@ -1239,6 +1357,12 @@ function sendApprovalEmail(analystName, analystEmail, requestId, type, info1, in
                       <p><strong>ID Chamado:</strong> #${requestId}</p>
                       <p><strong>Usuário:</strong> ${info1}</p>
                       <p><strong>Nome:</strong> ${info2}</p>`;
+    } else if (type === "WMS_PRINT_CLEAN" || type === "WMS") {
+        subject = `🖨️ Validação: Limpeza Fila WMS #${requestId}`;
+        detailHtml = `<p><strong>Tipo:</strong> CANCELAMENTO DE IMPRESSÕES WMS</p>
+                      <p><strong>ID Chamado:</strong> #${requestId}</p>
+                      <p><strong>Fila de Impressão:</strong> ${info1}</p>
+                      <p><strong>Justificativa:</strong> ${info2}</p>`;
     } else {
         subject = `👥 Validação: Espelhamento #${requestId}`;
         detailHtml = `<p><strong>Tipo:</strong> ESPELHAMENTO (MIRROR)</p>
@@ -1523,6 +1647,11 @@ function handleUnifiedQueue() {
                     // BitLocker não precisa de senha
                     r.hostname = row[3]; // Col D = User Name / Hostname
                     r.password_id_prefix = row[12]; // Col M = Prefixo do ID da Senha
+                } else if (taskType === "WMS_PRINT_CLEAN") {
+                    // v1.7.0: WMS Print Queue Clean
+                    r.queue_name = row[13]; // Col N = MODELO (queue_name para WMS)
+                    r.filial = row[2];      // Col C = Filial
+                    r.justificativa = row[12]; // Col M = DETALHES_ADICIONAIS
                 } else {
                     // Reset / Unlock
                     r.nova_senha = generatePassword();

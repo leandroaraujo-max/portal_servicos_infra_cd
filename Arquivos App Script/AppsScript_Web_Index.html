@@ -263,21 +263,32 @@
                                 class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all">
                                 Desbloqueios
                             </button>
-                            <button @click="loadQueue"
-                                :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'queue', 'text-white/80 hover:text-white': currentTab !== 'queue'}"
-                                class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all">
-                                Fila
-                            </button>
+
                             <button @click="switchTab('bitlocker')"
                                 :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'bitlocker', 'text-white/80 hover:text-white': currentTab !== 'bitlocker'}"
                                 class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all flex items-center gap-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20"
                                     fill="currentColor">
                                     <path fill-rule="evenodd"
-                                        d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 001-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z"
+                                        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
                                         clip-rule="evenodd" />
                                 </svg>
                                 BitLocker
+                            </button>
+                            <button @click="switchTab('wms')"
+                                :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'wms', 'text-white/80 hover:text-white': currentTab !== 'wms'}"
+                                class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20"
+                                    fill="currentColor">
+                                    <path
+                                        d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z" />
+                                </svg>
+                                WMS
+                            </button>
+                            <button @click="loadQueue"
+                                :class="{'bg-white text-blue-700 shadow-sm': currentTab === 'queue', 'text-white/80 hover:text-white': currentTab !== 'queue'}"
+                                class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all">
+                                Solicitações
                             </button>
                         </div>
                     </div>
@@ -997,6 +1008,141 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- WMS TAB (v1.7.0) -->
+                <div v-if="currentTab === 'wms'" class="space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                            Cancelamento de Filas de Impressão WMS
+                        </h2>
+                        <p class="text-sm text-gray-500 mb-6">
+                            Solicite o cancelamento de trabalhos de impressão pendentes no cluster WMS.
+                        </p>
+
+                        <div class="space-y-6">
+                            <!-- Solicitante -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-b pb-6">
+                                <div class="w-full">
+                                    <label
+                                        class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                                        Solicitante (ID, Nome, Usuário ou Email)
+                                    </label>
+                                    <div class="flex gap-2">
+                                        <input type="text" v-model="wmsUserId" @keyup.enter="fetchWmsUserInfo"
+                                            placeholder="Busca inteligente..."
+                                            class="block w-full px-3 py-2.5 text-sm border-gray-300 rounded-lg border bg-white shadow-sm focus:ring-blue-500">
+                                        <button @click="fetchWmsUserInfo" :disabled="wmsSearchingUser"
+                                            class="bg-blue-600 text-white p-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center">
+                                            <svg v-if="wmsSearchingUser" class="animate-spin h-4 w-4" fill="none"
+                                                viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                    stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor"
+                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                            </svg>
+                                            <svg v-else class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div v-if="wmsUserFound"
+                                        class="mt-2 p-2 bg-green-50 rounded border border-green-100 animate-fade-in">
+                                        <p class="text-xs text-green-700 font-bold uppercase tracking-tight">✅ {{
+                                            wmsUserFound.nome }}</p>
+                                        <p class="text-xs text-green-600">{{ wmsUserFound.filial }} | {{
+                                            wmsUserFound.user_name }}</p>
+                                    </div>
+                                </div>
+                                <div class="w-full">
+                                    <label
+                                        class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                                        Filtro de Impressora (Filial)
+                                    </label>
+                                    <input type="text" v-model="wmsPrinterFilter"
+                                        placeholder="Digite para filtrar impressoras..."
+                                        class="block w-full px-3 py-2.5 text-sm border-gray-300 rounded-lg border bg-white shadow-sm focus:ring-blue-500 uppercase">
+                                </div>
+                            </div>
+
+                            <!-- Seleção Fila -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-b pb-6">
+                                <div class="w-full">
+                                    <label
+                                        class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                                        Fila de Impressão
+                                    </label>
+                                    <select v-model="wmsQueueName"
+                                        class="block w-full px-3 py-2.5 text-sm border-gray-300 rounded-lg border bg-white shadow-sm focus:ring-blue-500">
+                                        <option value="" disabled>Selecione a Fila...</option>
+                                        <option v-for="printer in filteredWmsPrinters" :key="printer" :value="printer">
+                                            {{ printer }}</option>
+                                    </select>
+                                    <p class="mt-1 text-xs text-gray-400">{{ wmsPrinterCache.length }} impressoras
+                                        disponíveis</p>
+                                </div>
+                                <div class="w-full">
+                                    <label
+                                        class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                                        Analista Responsável
+                                    </label>
+                                    <select v-model="wmsAnalyst"
+                                        class="block w-full px-3 py-2.5 text-sm border-gray-300 rounded-lg border bg-white shadow-sm focus:ring-blue-500">
+                                        <option value="" disabled>Selecione o Analista...</option>
+                                        <option v-for="a in analystList" :key="a" :value="a">{{ a }}</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Justificativa -->
+                            <div class="border-b pb-6">
+                                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                                    Justificativa (Obrigatório)
+                                </label>
+                                <textarea v-model="wmsJustification" rows="3"
+                                    placeholder="Descreva o motivo da solicitação de limpeza da fila..."
+                                    class="block w-full px-3 py-2.5 text-sm border-gray-300 rounded-lg border bg-white shadow-sm focus:ring-blue-500 resize-none"></textarea>
+                            </div>
+
+                            <!-- Botão -->
+                            <div class="flex justify-end">
+                                <button @click="submitWmsRequest"
+                                    :disabled="wmsLoading || !wmsUserFound || !wmsQueueName || !wmsAnalyst || !wmsJustification"
+                                    class="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white px-10 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50 shadow-lg flex items-center justify-center gap-2">
+                                    <svg v-if="wmsLoading" class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                            stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    SOLICITAR LIMPEZA DE FILA
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Loading -->
+                        <div v-if="wmsLoading"
+                            class="mt-6 flex items-center justify-center p-8 bg-orange-50 rounded-lg border border-orange-100 flex-col gap-3">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+                            <p class="text-sm text-orange-700">{{ wmsStatusMsg || 'Processando...' }}</p>
+                        </div>
+
+                        <!-- Success -->
+                        <div v-if="wmsSuccess"
+                            class="mt-6 border-l-4 border-green-500 bg-green-50 p-6 rounded-r-lg shadow-sm animate-fade-in">
+                            <h3 class="text-lg font-bold text-green-800 mb-1">Solicitação Registrada!</h3>
+                            <p class="text-sm text-green-700">A solicitação de limpeza foi enviada para aprovação.</p>
+                            <p class="text-xs text-green-600 mt-2">ID: <span class="font-mono">{{ wmsRequestId }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
             </main>
 
             <footer v-if="currentTab === 'new' || currentTab === 'unlock'"
@@ -1162,6 +1308,20 @@
 
                 const rememberMe = ref(false);
 
+                // WMS Print Clean State (v1.7.0)
+                const wmsUserId = ref('');
+                const wmsUserFound = ref(null);
+                const wmsSearchingUser = ref(false);
+                const wmsQueueName = ref('');
+                const wmsPrinterFilter = ref('');
+                const wmsAnalyst = ref('');
+                const wmsJustification = ref('');
+                const wmsPrinterCache = ref([]);
+                const wmsLoading = ref(false);
+                const wmsStatusMsg = ref('');
+                const wmsSuccess = ref(false);
+                const wmsRequestId = ref('');
+
                 // --- AUTH METHODS ---
                 const handleLogin = () => {
                     isLoading.value = true;
@@ -1209,6 +1369,9 @@
                     } else {
                         google.script.run.withSuccessHandler(handleAnalysts).getAnalystsList();
                     }
+
+                    // v1.7.0: Carrega cache de impressoras WMS
+                    loadWmsPrinterCache();
                 };
 
                 const logout = () => {
@@ -1696,6 +1859,81 @@
                     return currentTab.value === 'new' ? 'SOLICITAR RESET' : 'SOLICITAR DESBLOQUEIO';
                 });
 
+                // WMS Functions (v1.7.0)
+                const filteredWmsPrinters = computed(() => {
+                    if (!wmsPrinterFilter.value) return wmsPrinterCache.value;
+                    const filter = wmsPrinterFilter.value.toUpperCase();
+                    return wmsPrinterCache.value.filter(p => p.toUpperCase().includes(filter));
+                });
+
+                const loadWmsPrinterCache = () => {
+                    google.script.run.withSuccessHandler(res => {
+                        wmsPrinterCache.value = res || [];
+                    }).withFailureHandler(e => {
+                        console.error('Erro ao carregar impressoras WMS:', e.message);
+                    }).getWmsPrinterCache();
+                };
+
+                const fetchWmsUserInfo = () => {
+                    if (!wmsUserId.value) return;
+                    wmsSearchingUser.value = true;
+                    wmsUserFound.value = null;
+                    google.script.run.withSuccessHandler(res => {
+                        wmsSearchingUser.value = false;
+                        if (res && res.length > 0) {
+                            wmsUserFound.value = res[0];
+                        } else {
+                            alert('Usuário não encontrado.');
+                        }
+                    }).withFailureHandler(e => {
+                        wmsSearchingUser.value = false;
+                        alert(e.message);
+                    }).searchUserBQ(wmsUserId.value);
+                };
+
+                const submitWmsRequest = () => {
+                    if (!wmsUserFound.value || !wmsQueueName.value || !wmsAnalyst.value || !wmsJustification.value) {
+                        alert('Preencha todos os campos obrigatórios.');
+                        return;
+                    }
+
+                    wmsLoading.value = true;
+                    wmsSuccess.value = false;
+                    wmsStatusMsg.value = 'Registrando solicitação...';
+
+                    const payload = {
+                        tipo: 'WMS_PRINT_CLEAN',
+                        queue_name: wmsQueueName.value,
+                        id: wmsUserFound.value.id,
+                        nome: wmsUserFound.value.nome,
+                        user_name: wmsUserFound.value.user_name,
+                        email: wmsUserFound.value.email,
+                        filial: wmsUserFound.value.filial,
+                        centro_custo: wmsUserFound.value.centro_custo,
+                        analista: wmsAnalyst.value,
+                        justificativa: wmsJustification.value
+                    };
+
+                    google.script.run.withSuccessHandler(res => {
+                        wmsLoading.value = false;
+                        if (res.success) {
+                            wmsSuccess.value = true;
+                            wmsRequestId.value = res.id || 'N/A';
+                            // Reset form
+                            wmsUserId.value = '';
+                            wmsUserFound.value = null;
+                            wmsQueueName.value = '';
+                            wmsPrinterFilter.value = '';
+                            wmsJustification.value = '';
+                        } else {
+                            alert('Erro: ' + (res.message || 'Falha ao registrar solicitação.'));
+                        }
+                    }).withFailureHandler(e => {
+                        wmsLoading.value = false;
+                        alert('Erro: ' + e.message);
+                    }).submitRequest(payload);
+                };
+
                 return {
                     appLogo,
                     currentView, authForm, isLoading, userEmail, userInitials, rememberMe,
@@ -1724,7 +1962,12 @@
                     resultSortColumn, resultSortDirection, sortResults, filteredQueue,
 
                     // Labels
-                    searchLabel, submitActionLabel
+                    searchLabel, submitActionLabel,
+
+                    // WMS (v1.7.0)
+                    wmsUserId, wmsUserFound, wmsSearchingUser, wmsQueueName, wmsPrinterFilter,
+                    wmsAnalyst, wmsJustification, wmsPrinterCache, wmsLoading, wmsStatusMsg,
+                    wmsSuccess, wmsRequestId, filteredWmsPrinters, fetchWmsUserInfo, submitWmsRequest, loadWmsPrinterCache
                 };
             }
         }).mount('#app');
