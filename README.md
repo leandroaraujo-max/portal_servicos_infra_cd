@@ -75,6 +75,22 @@ O Daemon deve rodar como **Tarefa Agendada (GPO/Task Scheduler)** em um servidor
 
 ## 📜 Histórico de Versões Relevantes
 
+### v1.6.6 & Daemon v5.9 (Estabilidade & Multi-Ambiente)
+- **Backend (v1.6.6)**: 
+    - Remoção definitiva de hardcoded IDs (`ID_PLANILHA_GESTAO`).
+    - Correção crítica no fluxo de BitLocker e filas do Daemon.
+    - Conexão dinâmica de banco de dados (`getDatabaseConnection`) para todos os módulos.
+- **Daemon (v5.9)**:
+    - **Multi-Ambiente**: Suporte simultâneo a Produção e Homologação na mesma instância.
+    - **Lint Fix**: Correção de variáveis reservadas (`$pwd` -> `$clearPwd`) para maior segurança.
+    - **UX**: Ajuste de terminologia de e-mails ("Custódia" -> "Recuperação").
+- **Frontend (v1.6.6)**: Atualização visual refletindo a versão estável do motor.
+
+### v1.6.x (Diagnóstico e Refatoração)
+- Implementação de modo de diagnóstico (`?mode=diag`).
+- Refatoração de conexão com banco de dados para suportar propriedades estritas.
+
+
 ### v1.4.2 (Performance & Fluxo)
 - **Daemon Boost**: Intervalo de polling reduzido para 5 segundos (Resposta 2x mais rápida).
 - **Fix Espelhamento**: Correção no fluxo de aprovação. Solicitações de espelho agora nascem corretamente como `PENDENTE`, exigindo aprovação explicita via e-mail.
