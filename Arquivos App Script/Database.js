@@ -12,23 +12,28 @@
  */
 function getDatabaseConnection() {
   const props = PropertiesService.getScriptProperties().getProperties();
+  const scriptId = ScriptApp.getScriptId();
 
-  // Tenta resolver a URL pela ordem de especificidade
-  // Prioriza as novas chaves definidas pelo usuário
-  const dbUrl = props['DB_URL_PROD'] || props['DB_URL_STAGING'];
+  // IDs dos Projetos (Source of Truth)
+  const ID_PROD = '1r3yVjaZ9-XzlPhZl9t0zd2pvH-PtN55KHKQTW_Nh0w00cbh-47q7yXOd';
+  const isProd = (scriptId === ID_PROD) || (props['ENV'] === 'PROD');
 
-  // 2. Fail-safe
+  // v1.6.5: Segregação Automática Inteligente
+  let dbUrl = isProd ? props['DB_URL_PROD'] : props['DB_URL_STAGING'];
+
+  // Fail-safe: Se a URL específica não existir, tenta alternar
   if (!dbUrl) {
-    throw new Error("⛔ ERRO CRÍTICO: Nenhuma propriedade de conexão válida (DB_URL_PROD ou DB_URL_STAGING) encontrada.");
+    dbUrl = props['DB_URL_PROD'] || props['DB_URL_STAGING'];
+  }
+
+  if (!dbUrl) {
+    throw new Error("⛔ ERRO CRÍTICO: Configuração de DB_URL não encontrada para " + (isProd ? "PRODUÇÃO" : "STAGING"));
   }
 
   try {
-    // 3. Conecta na planilha via URL
     const ss = SpreadsheetApp.openByUrl(dbUrl);
-    // Tenta inferir ambiente pelo nome da chave ou propriedade ENV
-    const isProd = (props['ENV'] === 'PROD') || (!!props['DB_URL_PROD']);
-
-    console.log("✅ Conectado ao DB: " + ss.getName() + " [" + (isProd ? "PRODUÇÃO" : "HOMOLOGAÇÃO/DEV") + "]");
+    console.log("📡 Ambiente Identificado: " + (isProd ? "PRODUÇÃO" : "STAGING"));
+    console.log("✅ Conectado ao DB: " + ss.getName());
     return ss;
   } catch (e) {
     throw new Error("⛔ ERRO DE CONEXÃO: " + e.message);
@@ -36,14 +41,12 @@ function getDatabaseConnection() {
 }
 
 /**
- * Helper opcional para saber em qual ambiente estamos (baseado no ID ou outra flag)
- * Útil para condicionais de segurança (ex: não enviar emails reais em homolog)
+ * Retorna true se estiver rodando no script de Produção.
  */
 function isProduction() {
-  const props = PropertiesService.getScriptProperties().getProperties();
-  if (props['ENV'] === 'PROD') return true;
-  if (props['DB_URL_PROD']) return true; // Infere PROD se a chave específica existir
-  return false;
+  const scriptId = ScriptApp.getScriptId();
+  const ID_PROD = '1r3yVjaZ9-XzlPhZl9t0zd2pvH-PtN55KHKQTW_Nh0w00cbh-47q7yXOd';
+  return (scriptId === ID_PROD) || (PropertiesService.getScriptProperties().getProperty('ENV') === 'PROD');
 }
 
 // =========================================================================
