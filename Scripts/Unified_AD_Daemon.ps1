@@ -325,7 +325,7 @@ function Invoke-TaskExecution {
 
             "MIRROR" {
                 # v6.1: Espelhamento de Grupos
-                $gruposParaAdicionar = ($Task.grupos_selecionados, $Task.GRUPOS_SELECIONADOS | Where-Object { $_ } | Select-Object -First 1)
+                $gruposParaAdicionar = ($Task.grupos, $Task.GRUPOS | Where-Object { $_ } | Select-Object -First 1)
                 
                 if (-not $gruposParaAdicionar) {
                     throw "Nenhum grupo especificado para espelhamento."
