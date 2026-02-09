@@ -1,7 +1,7 @@
-# 🔐 Identity Manager & AD Sync - Magalog Suporte Infra (v1.7.6)
+# 🔐 Portal de Serviços - Suporte Infra CDs (v1.7.9)
 
 ## 🚀 Visão Geral
-O **Identity Manager** evoluiu de uma ferramenta simples de reset para um ecossistema completo de gestão de identidades e automação de Active Directory e Infraestrutura. O sistema utiliza uma arquitetura híbrida para unir a agilidade da nuvem (Google Cloud/Apps Script) com a autoridade de execução local (PowerShell/Active Directory).
+O **Portal de Serviços** é um ecossistema completo de gestão de identidades e automação de Active Directory e Infraestrutura. O sistema utiliza uma arquitetura híbrida para unir a agilidade da nuvem (Google Cloud/Apps Script) com a autoridade de execução local (PowerShell/Active Directory).
 
 ## 🏗️ Arquitetura do Sistema
 O ecossistema é composto por três pilares fundamentais:
