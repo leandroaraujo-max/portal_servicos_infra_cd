@@ -520,6 +520,16 @@ function submitBitlockerRequest(payload) {
         nextId = Math.max(...ids.map(Number)) + 1;
     }
 
+    // Chamada Zendesk
+    const ticketId = abrirTicketZendesk({
+        tipo_tarefa: "BITLOCKER",
+        valor: payload.hostname,
+        email_solicitante: payload.requester,
+        email_analista: payload.analystEmail || payload.analyst,
+        subcategoria: "acessos_bitlocker",
+        filial: u.filial || "" // Passa filial do userData para tag Zendesk
+    });
+
     sheet.appendRow([
         nextId,                              // ID (A)
         timestamp,                           // DATA (B)
@@ -534,13 +544,19 @@ function submitBitlockerRequest(payload) {
         "APROVADO",                          // STATUS_APROVACAO (K)
         "BITLOCKER",                         // TIPO_TAREFA (L)
         payload.passwordId,                  // DETALHES_ADICIONAIS (M) -> 8 Dígitos do ID da Senha
-        "", "", "", ""                       // N, O, P, Q
+        "", "", "", "",                      // N, O, P, Q
+        ticketId || "FALHA_ZD"               // R
     ]);
 
     return { success: true, requestId: nextId };
 }
 
 function submitResetQueue(requestData) {
+    // Dispatch para função específica de desbloqueio se necessário
+    if (requestData.task_type === "DESBLOQUEIO_CONTA" || requestData.task_type === "UNLOCK") {
+        return submitUnlockRequest(requestData);
+    }
+
     const ss = getDatabaseConnection();
     let queueSheet = ss.getSheetByName("Solicitações");
 
@@ -577,6 +593,15 @@ function submitResetQueue(requestData) {
     // 2. OTIMIZAÇÃO: Construção da matriz de dados (Bulk Insert)
     const rowsToAdd = requestData.users.map((u, index) => {
         const currentId = startId + index;
+        const ticketId = abrirTicketZendesk({
+            tipo_tarefa: requestData.task_type || "RESET",
+            valor: u.user_name,
+            email_solicitante: requesterEmail,
+            email_analista: finalAnalystEmail,
+            subcategoria: (requestData.task_type === "DESBLOQUEIO_CONTA") ? "acessos_desbloquei_usuario" : "acessos_reset_de_senha",
+            filial: requestData.filial // Passa a filial para formatar a tag tkf_filial_XXX
+        });
+
         return [
             currentId,                      // A (0)
             timestamp,                      // B (1)
@@ -594,7 +619,8 @@ function submitResetQueue(requestData) {
             "",                             // N (13)
             "",                             // O (14)
             "",                             // P (15)
-            ""                              // Q (16)
+            "",                             // Q (16)
+            ticketId || "FALHA_ZD"          // R (17)
         ];
     });
 
@@ -627,8 +653,93 @@ function submitResetQueue(requestData) {
         console.error("Erro ao enviar emails de aprovação:", e);
     }
 
-    return true;
+
+    return { success: true, count: rowsToAdd.length };
 }
+
+/**
+ * Submissão específica para Desbloqueio de Conta (Fornecida pelo Usuário + Adaptação Filial)
+ * Integra gravação em Planilha + Abertura de Ticket Zendesk
+ */
+function submitUnlockRequest(requestData) {
+    const ss = getDatabaseConnection();
+    let queueSheet = ss.getSheetByName("Solicitações");
+
+    // Garante que os cabeçalhos existam
+    ensureHeaders(queueSheet);
+
+    const timestamp = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss");
+    const requesterEmail = Session.getActiveUser().getEmail();
+
+    // Identidade 2: Analista selecionado
+    const analystData = mapAnalystByEmail(requesterEmail);
+    const finalAnalystEmail = analystData ? analystData.email : (requestData.analyst || requesterEmail);
+
+    // 1. Cálculo de ID sequencial
+    const lastRow = queueSheet.getLastRow();
+    let startId = 1;
+    if (lastRow > 1) {
+        const ids = queueSheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+        const validIds = ids.map(Number).filter(n => !isNaN(n));
+        if (validIds.length > 0) {
+            startId = Math.max(...validIds) + 1;
+        }
+    }
+
+    // 2. Processamento
+    const rowsToAdd = requestData.users.map((u, index) => {
+        const currentId = startId + index;
+
+        // Integração Zendesk
+        let ticketId = "FALHA_ZD";
+        try {
+            ticketId = abrirTicketZendesk({
+                tipo_tarefa: "DESBLOQUEIO_CONTA",
+                valor: u.user_name,
+                email_solicitante: requesterEmail,
+                email_analista: finalAnalystEmail,
+                subcategoria: "acessos_desbloquei_usuario",
+                filial: u.filial
+            });
+        } catch (e) {
+            console.error("Erro Zendesk no Desbloqueio:", e.message);
+            ticketId = `FALHA_ZD: ${e.message}`;
+        }
+
+        // Se o retorno da função for uma string de erro (começa com FALHA_ZD), usa ela
+        if (ticketId && String(ticketId).startsWith("FALHA_ZD")) {
+            // Mantém o erro
+        } else if (!ticketId) {
+            ticketId = "FALHA_ZD: Retorno Nulo";
+        }
+
+        // Retorna a linha completa (A até R)
+        return [
+            currentId,          // A
+            timestamp,          // B
+            u.filial,           // C
+            u.user_name,        // D
+            u.nome,             // E
+            u.email,            // F
+            u.centro_custo,     // G
+            finalAnalystEmail,  // H
+            requesterEmail,     // I
+            "PENDENTE",         // J
+            "APROVADO",         // K (Auto-aprovado)
+            "DESBLOQUEIO_CONTA",// L
+            "", "", "", "", "", // M-Q
+            ticketId            // R
+        ];
+    });
+
+    // 3. Gravação
+    if (rowsToAdd.length > 0) {
+        queueSheet.getRange(lastRow + 1, 1, rowsToAdd.length, rowsToAdd[0].length).setValues(rowsToAdd);
+    }
+
+    return { success: true, count: rowsToAdd.length, firstTicketId: rowsToAdd[0][17] };
+}
+
 
 /**
  * v1.7.0: Função genérica para submissão de solicitações (WMS, etc)
@@ -662,7 +773,17 @@ function submitRequest(data) {
         const analystData = mapAnalystByEmail(requesterEmail);
         const finalAnalystEmail = analystData ? analystData.email : (data.analista || requesterEmail);
 
-        // Monta a linha no schema padrão (A-Q)
+        // Chamada Zendesk
+        const ticketId = abrirTicketZendesk({
+            tipo_tarefa: "WMS_PRINT_CLEAN",
+            valor: data.queue_name,
+            email_solicitante: requesterEmail,
+            email_analista: finalAnalystEmail,
+            subcategoria: "acessos_limpeza_de_fila_de_impressão",
+            filial: data.filial || "" // Passa filial da busca para tag Zendesk
+        });
+
+        // Monta a linha no schema padrão (A-R)
         const row = [
             nextId,                           // A: ID
             timestamp,                        // B: DATA_HORA
@@ -680,7 +801,8 @@ function submitRequest(data) {
             data.queue_name || "",            // N: MODELO (usado para queue_name no WMS)
             "",                               // O: DESTINOS
             "",                               // P: GRUPOS
-            ""                                // Q: ULTIMO_LEMBRETE
+            "",                               // Q: ULTIMO_LEMBRETE
+            ticketId || "FALHA_ZD"            // R: TICKET ZENDESK
         ];
 
         queueSheet.appendRow(row);
@@ -755,8 +877,8 @@ function getQueueWeb() {
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) return [];
 
-    // Retorna todos os registros (sem limite) - Ajustado para v1.2.1
-    const data = sheet.getRange(2, 1, lastRow - 1, 16).getValues();
+    // Retorna todos os registros (sem limite) - Ajustado para v1.2.1 + Zendesk
+    const data = sheet.getRange(2, 1, lastRow - 1, 18).getValues();
 
     return data.reverse().map(r => ({
         id: r[0],
@@ -767,7 +889,8 @@ function getQueueWeb() {
         analista: r[7],  // Col H (7) - Restaurado
         status: r[9],    // Col J (9) - Restaurado
         aprovacao: r[10],// Col K (10) - Restaurado
-        tipo: r[11]      // Col L (11) - Restaurado
+        tipo: r[11],     // Col L (11) - Restaurado
+        ticket_zendesk: r[17] || "" // Nova Coluna R
     }));
 }
 
@@ -797,6 +920,40 @@ function doPost(e) {
             const sheetFila = ss.getSheetByName("Solicitações");
             const idReq = String(data.id).trim();
             const filaData = sheetFila.getDataRange().getValues();
+
+            let found = false;
+            let targetRowIndex = -1;
+            let row = null;
+
+            // Busca reversa
+            for (let i = filaData.length - 1; i >= 1; i--) {
+                if (String(filaData[i][0]).trim() === idReq) {
+                    targetRowIndex = i;
+                    row = filaData[i];
+                    break;
+                }
+            }
+
+            if (row) {
+                // Atualiza status e mensagem
+                row[9] = data.status; // Coluna J (Status)
+                row[12] = `[${new Date().toLocaleString()}] ${data.message} ${row[12] ? '| ' + row[12] : ''}`; // Coluna M (Detalhes) - Append
+
+                // Lógica de Fechamento Zendesk
+                if (data.status === "CONCLUIDO") {
+                    const ticketId = row[17]; // Coluna R
+                    // Tenta nome colaborador (4) ou solicitante (8)
+                    const nomeParaMsg = (row[4] && row[4] !== "N/A" && row[4] !== "") ? row[4] : row[8];
+
+                    if (ticketId && ticketId !== "FALHA_ZD") {
+                        fecharTicketZendesk(ticketId, nomeParaMsg);
+                    }
+                }
+
+                // Salva linha atualizada
+                sheetFila.getRange(targetRowIndex + 1, 1, 1, row.length).setValues([row]);
+                found = true;
+            }
 
             for (let i = 1; i < filaData.length; i++) {
                 if (String(filaData[i][0]).trim() === idReq) {
@@ -1783,7 +1940,7 @@ function setupSLATrigger() {
 }
 
 function ensureHeaders(sheet) {
-    const expected = ["ID", "DATA_HORA", "FILIAL", "USER_NAME", "NOME", "EMAIL_COLAB", "CENTRO_CUSTO", "ANALISTA_RESPONSAVEL", "SOLICITANTE", "STATUS_PROCESSAMENTO", "STATUS_APROVACAO", "TIPO_TAREFA", "DETALHES_ADICIONAIS", "MODELO", "DESTINOS", "GRUPOS", "ULTIMO_LEMBRETE"];
+    const expected = ["ID", "DATA_HORA", "FILIAL", "USER_NAME", "NOME", "EMAIL_COLAB", "CENTRO_CUSTO", "ANALISTA_RESPONSAVEL", "SOLICITANTE", "STATUS_PROCESSAMENTO", "STATUS_APROVACAO", "TIPO_TAREFA", "DETALHES_ADICIONAIS", "MODELO", "DESTINOS", "GRUPOS", "ULTIMO_LEMBRETE", "ZENDESK_TICKET_ID"];
     const currentHeaders = sheet.getRange(1, 1, 1, expected.length).getValues()[0];
 
     let needsUpdate = false;

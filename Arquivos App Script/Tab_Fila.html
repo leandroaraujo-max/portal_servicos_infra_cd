@@ -68,6 +68,7 @@
                     <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase">Analista</th>
                     <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase">Tipo</th>
                     <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase">Status</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase">Ticket ZD</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100">
@@ -99,9 +100,26 @@
                             class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full">{{ item.status
                             }}</span>
                     </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <template v-if="item.ticket_zendesk && item.ticket_zendesk !== 'FALHA_ZD'">
+                            <a :href="'https://helpdesk.magalu.com.br/hc/pt-br/requests/' + item.ticket_zendesk"
+                                target="_blank"
+                                class="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-bold transition-colors">
+                                #{{ item.ticket_zendesk }}
+                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path
+                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </a>
+                        </template>
+                        <template v-else>
+                            <span class="text-gray-400 italic">N/A</span>
+                        </template>
+                    </td>
                 </tr>
                 <tr v-if="paginatedQueue.length === 0">
-                    <td colspan="7" class="px-6 py-10 text-center text-gray-400">Nenhum registro encontrado com os
+                    <td colspan="8" class="px-6 py-10 text-center text-gray-400">Nenhum registro encontrado com os
                         filtros selecionados.</td>
                 </tr>
             </tbody>
