@@ -18,12 +18,40 @@ $Environments = @(
 )
 
 $LoopIntervalSeconds = 5 
-$LogDir = "C:\ProgramData\ADResetTool\Logs"
+
 $global:smtpServer = "smtpml.magazineluiza.intranet"
 
 # --- PREPARAÇÃO ---
-if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Force -Path $LogDir | Out-Null }
-$LogFile = Join-Path $LogDir "UnifiedDaemon_$(Get-Date -Format 'yyyy-MM-dd').log"
+$TargetLogDir = "C:\ProgramData\ADResetTool\Logs"
+$FallbackLogDir = Join-Path $env:TEMP "ADResetTool_Logs"
+$LogFileName = "UnifiedDaemon_$(Get-Date -Format 'yyyy-MM-dd').log"
+
+# Tenta usar o diretório principal, faz fallback se falhar
+try {
+    if (-not (Test-Path $TargetLogDir)) { New-Item -ItemType Directory -Force -Path $TargetLogDir -ErrorAction Stop | Out-Null }
+    
+    $TargetLogFile = Join-Path $TargetLogDir $LogFileName
+    
+    # Teste de escrita específico no arquivo de log do dia
+    # Se o arquivo existe, tenta abrir para append. Se não, tenta criar.
+    if (Test-Path $TargetLogFile) {
+        $stream = [System.IO.File]::Open($TargetLogFile, [System.IO.FileMode]::Append, [System.IO.FileAccess]::Write)
+        $stream.Close()
+    }
+    else {
+        "init" | Out-File -FilePath $TargetLogFile -ErrorAction Stop
+    }
+    
+    $LogDir = $TargetLogDir
+}
+catch {
+    # Se falhar no ProgramData (pasta ou arquivo), usa o Temp do usuário
+    $LogDir = $FallbackLogDir
+    if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Force -Path $LogDir | Out-Null }
+    Write-Host "AVISO: Sem permissão no log principal ($TargetLogDir). Erro: $($_.Exception.Message). Usando fallback: $LogDir" -ForegroundColor Yellow
+}
+
+$LogFile = Join-Path $LogDir $LogFileName
 
 # Garante o módulo de AD
 if (-not (Get-Module -Name ActiveDirectory)) {
@@ -40,7 +68,12 @@ function Write-Log {
     $logEntry = "[$timestamp] [$Level] $Prefix$Message"
     $color = switch ($Level) { "INFO" { "Cyan" } "WARN" { "Yellow" } "ERROR" { "Red" } "SUCCESS" { "Green" } default { "Gray" } }
     Write-Host $logEntry -ForegroundColor $color
-    $logEntry | Out-File -FilePath $LogFile -Append -Encoding UTF8
+    try {
+        $logEntry | Out-File -FilePath $LogFile -Append -Encoding UTF8 -ErrorAction Stop
+    }
+    catch {
+        Write-Host "ERRO AO GRAVAR LOG: $($_.Exception.Message)" -ForegroundColor Red
+    }
 }
 
 # Função para enviar requisições POST com encoding UTF-8
@@ -49,6 +82,43 @@ function Send-ApiRequest {
     $json = ConvertTo-Json $Body -Depth 5
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
     return Invoke-RestMethod -Uri $Uri -Method Post -Body $bytes -ContentType "application/json; charset=utf-8"
+}
+
+# Função Helper para Retry de Comandos AD
+function Invoke-ADCommandWithRetry {
+    param (
+        [ScriptBlock]$Command,
+        [int]$MaxRetries = 3,
+        [int]$RetryDelaySeconds = 2
+    )
+    
+    $currentRetry = 0
+    $lastError = $null
+    
+    while ($currentRetry -lt $MaxRetries) {
+        try {
+            return & $Command
+        }
+        catch {
+            $lastError = $_.Exception.Message
+            $currentRetry++
+            
+            # Verifica se é erro de conexão/autenticação
+            if ($lastError -match "authenticated|server|connection|target account name is incorrect") {
+                Write-Log "Erro AD detectado ($lastError). Tentativa $currentRetry de $MaxRetries..." "WARN"
+                Start-Sleep -Seconds $RetryDelaySeconds
+                
+                # Tenta 'acordar' a sessão
+                try { Get-ADRootDSE -ErrorAction SilentlyContinue | Out-Null } catch {}
+            }
+            else {
+                # Se não for erro de infra, repassa o erro imediatamente
+                throw $_
+            }
+        }
+    }
+    
+    throw "Falha após $MaxRetries tentativas. Último erro: $lastError"
 }
 
 # --- FUNÇÕES DE EMAIL (ESTILIZADAS MAGALU) ---
@@ -201,7 +271,7 @@ function Sync-PrintQueues {
     
     
     # Obtém lista de servidores WMS da API (Failover Coluna C - Planilha Servidores)
-    $wmsServers = Get-WmsClusterConfig -Url $ApiUrl
+    $wmsServers = Get-WmsClusterConfig -ApiUrl $ApiUrl
     
     if (-not $wmsServers -or $wmsServers.Count -eq 0) {
         Write-Log "Usando fallback local para Cluster WMS" "WARN"
@@ -301,7 +371,11 @@ function Invoke-TaskExecution {
                 # Se for matrícula (apenas números), busca o username
                 if ($userModelo -match '^\d+$') {
                     Write-Log "Matrícula detectada ($userModelo), buscando username..." "INFO" $LogPfx
-                    $adUser = Get-ADUser -Filter "EmployeeID -eq '$userModelo'" -Properties SamAccountName -ErrorAction Stop
+                    
+                    $adUser = Invoke-ADCommandWithRetry -Command {
+                        Get-ADUser -Filter "EmployeeID -eq '$userModelo'" -Properties SamAccountName -ErrorAction Stop
+                    }
+                    
                     if (-not $adUser) {
                         throw "Usuário com matrícula $userModelo não encontrado no AD"
                     }
@@ -309,7 +383,9 @@ function Invoke-TaskExecution {
                     Write-Log "Username encontrado: $userModelo" "INFO" $LogPfx
                 }
                 
-                $groups = (Get-ADPrincipalGroupMembership -Identity $userModelo -ErrorAction Stop | Select-Object -ExpandProperty Name) -join ";"
+                $groups = Invoke-ADCommandWithRetry -Command {
+                    (Get-ADPrincipalGroupMembership -Identity $userModelo -ErrorAction Stop | Select-Object -ExpandProperty Name) -join ";"
+                }
                 
                 # Para FETCH_GROUPS, usa action update_mirror_result
                 $payload = @{ 
@@ -358,7 +434,9 @@ function Invoke-TaskExecution {
                             Write-Log "Usuário já é membro de: $grupo" "WARN" $LogPfx
                         }
                         else {
-                            Add-ADGroupMember -Identity $grupo -Members $user -ErrorAction Stop
+                            Invoke-ADCommandWithRetry -Command {
+                                Add-ADGroupMember -Identity $grupo -Members $user -ErrorAction Stop
+                            }
                             $adicionados += $grupo
                             Write-Log "Adicionado ao grupo: $grupo" "SUCCESS" $LogPfx
                         }
@@ -399,9 +477,12 @@ function Invoke-TaskExecution {
             "RESET" {
                 if (-not $clearPwd) { throw "Senha ausente para Reset." }
                 $securePwd = ConvertTo-SecureString $clearPwd -AsPlainText -Force
-                Set-ADAccountPassword -Identity $user -NewPassword $securePwd -Reset -ErrorAction Stop
-                Unlock-ADAccount -Identity $user -ErrorAction Stop
-                Set-ADUser -Identity $user -ChangePasswordAtLogon $true -ErrorAction Stop
+                
+                Invoke-ADCommandWithRetry -Command {
+                    Set-ADAccountPassword -Identity $user -NewPassword $securePwd -Reset -ErrorAction Stop
+                    Unlock-ADAccount -Identity $user -ErrorAction Stop
+                    Set-ADUser -Identity $user -ChangePasswordAtLogon $true -ErrorAction Stop
+                }
                 
                 $msgFinal = "Reset executado."
                 if ($emailColab) {
@@ -420,8 +501,10 @@ function Invoke-TaskExecution {
                 if ($prefix) {
                     Write-Log "Busca GLOBAL BitLocker (v5.7 - RDN Filter) por ID: $prefix" "INFO" $LogPfx
                     # Buscamos todos os objetos da classe e filtramos pelo DN/Name para evitar erro de atributos sintéticos.
-                    $recovery = Get-ADObject -Filter "objectClass -eq 'msFVE-RecoveryInformation'" -Properties msFVE-RecoveryPassword | 
-                    Where-Object { $_.DistinguishedName -like "*$prefix*" -or $_.Name -like "*$prefix*" } | Select-Object -First 1
+                    $recovery = Invoke-ADCommandWithRetry -Command {
+                        Get-ADObject -Filter "objectClass -eq 'msFVE-RecoveryInformation'" -Properties msFVE-RecoveryPassword | 
+                        Where-Object { $_.DistinguishedName -like "*$prefix*" -or $_.Name -like "*$prefix*" } | Select-Object -First 1
+                    }
                     
                     if ($recovery) {
                         if ($recovery.DistinguishedName -match "CN=([^,]+),CN=([^,]+),") {
@@ -429,7 +512,7 @@ function Invoke-TaskExecution {
                         }
                         else {
                             $parentDN = $recovery.DistinguishedName -replace '^CN=[^,]+,', ''
-                            $compParent = Get-ADComputer -Identity $parentDN -ErrorAction SilentlyContinue
+                            $compParent = Invoke-ADCommandWithRetry -Command { Get-ADComputer -Identity $parentDN -ErrorAction SilentlyContinue }
                             if ($compParent) { $hostnameResolved = $compParent.Name }
                         }
                         Write-Log "Chave localizada no DN (ID: $prefix). Hostname: $hostnameResolved" "SUCCESS" $LogPfx
@@ -438,9 +521,9 @@ function Invoke-TaskExecution {
 
                 if (-not $recovery) {
                     Write-Log "Fallback: Buscando computador por Hostname: $user" "INFO" $LogPfx
-                    $comp = Get-ADComputer -Filter "Name -eq '$user'" -ErrorAction SilentlyContinue
+                    $comp = Invoke-ADCommandWithRetry -Command { Get-ADComputer -Filter "Name -eq '$user'" -ErrorAction SilentlyContinue }
                     if ($comp) {
-                        $allRecoveries = Get-ADObject -Filter "objectClass -eq 'msFVE-RecoveryInformation'" -SearchBase $comp.DistinguishedName -Properties msFVE-RecoveryPassword
+                        $allRecoveries = Invoke-ADCommandWithRetry -Command { Get-ADObject -Filter "objectClass -eq 'msFVE-RecoveryInformation'" -SearchBase $comp.DistinguishedName -Properties msFVE-RecoveryPassword }
                         $recovery = $allRecoveries | Sort-Object whenCreated -Descending | Select-Object -First 1
                         $hostnameResolved = $comp.Name
                     }
@@ -469,7 +552,7 @@ function Invoke-TaskExecution {
             }
 
             "DESBLOQUEIO_CONTA" {
-                Unlock-ADAccount -Identity $user -ErrorAction Stop
+                Invoke-ADCommandWithRetry -Command { Unlock-ADAccount -Identity $user -ErrorAction Stop }
                 $payload.status = "CONCLUIDO"; $payload.message = "Conta desbloqueada com sucesso."
             }
 
